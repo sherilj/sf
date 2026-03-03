@@ -10,7 +10,7 @@ const WishlistPage = ({ wishlist, onAddToCart, onRemove, onViewProduct, onContin
     };
     if (wishlist.length === 0) {
         return (
-            <div style={{ backgroundColor: '#FEF8F0', width: '100vw', position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', padding: '100px 0' }}>
+            <div style={{ backgroundColor: '#FEF8F0', width: '100vw', position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', padding: '60px 0 40px', minHeight: '100vh', display: 'flex', alignItems: 'flex-start' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', textAlign: 'center' }}>
                     <div className="empty-cart-container fade-in" style={{ padding: '0', textAlign: 'center' }}>
                         <div className="empty-cart-icon" style={{ background: '#FEF8F0', padding: '30px', borderRadius: '50%', display: 'inline-block', marginBottom: '24px' }}>
