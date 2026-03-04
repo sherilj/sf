@@ -57,7 +57,35 @@ function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem("svasthya_user");
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+        // Only jump to landing if we were on the auth page
+        if (currentPage === "auth") {
+          setCurrentPage("landing");
+        }
+      } catch (error) {
+        console.error("Failed to restore session:", error);
+        localStorage.removeItem("svasthya_user");
+      }
+    }
+
+    // Simulate a small delay for smooth entry
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, []);
+
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -103,7 +131,7 @@ function App() {
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
     setCurrentPage("details");
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const addToCart = (product) => {
@@ -188,6 +216,18 @@ function App() {
     }
   };
 
+  if (isInitialLoading) {
+    return (
+      <div className="initial-loader">
+        <div className="loader-content">
+          <img src="/logo.png" alt="Svasthya Fresh" className="loader-logo" />
+          <div className="loader-spinner"></div>
+          <p>Nourishing your body...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="app-container"
@@ -202,7 +242,7 @@ function App() {
                 e.preventDefault();
                 setCurrentPage("landing");
                 closeMobileMenu();
-                window.scrollTo({ top: 0, behavior: "instant" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             >
               <img src="/logo.png" alt="Svasthya Fresh Logo" />
@@ -217,7 +257,7 @@ function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   setCurrentPage("landing");
-                  window.scrollTo({ top: 0, behavior: "instant" });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
                 Home
@@ -254,7 +294,7 @@ function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   setCurrentPage("ourStory");
-                  window.scrollTo({ top: 0, behavior: "instant" });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
                 Our Story
@@ -267,7 +307,7 @@ function App() {
                 onClick={(e) => {
                   e.preventDefault();
                   setCurrentPage("contact");
-                  window.scrollTo({ top: 0, behavior: "instant" });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
                 Contact
@@ -330,11 +370,11 @@ function App() {
               </div>
 
               {/* Wishlist Icon */}
-              <button className="icon-btn" onClick={() => { setCurrentPage("wishlist"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "instant" }); }}>
+              <button className="icon-btn" onClick={() => { setCurrentPage("wishlist"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 <Heart size={22} color={wishlist.length > 0 ? "#7C3225" : "#4A4A4A"} fill={wishlist.length > 0 ? "#7C3225" : "none"} />
                 {wishlist.length > 0 && <span className="cart-badge">{wishlist.length}</span>}
               </button>
-              <button className="icon-btn cart-btn" onClick={() => { setCurrentPage("cartPage"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "instant" }); }}>
+              <button className="icon-btn cart-btn" onClick={() => { setCurrentPage("cartPage"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 <ShoppingCart size={22} color="#4A4A4A" />
                 <span className="cart-badge">{cart.reduce((total, item) => total + item.quantity, 0)}</span>
               </button>
@@ -389,7 +429,7 @@ function App() {
             </div>
             <div className="mobile-nav-links">
               <a href="#" className={`mobile-nav-link ${currentPage === "landing" ? "active" : ""}`}
-                onClick={(e) => { e.preventDefault(); setCurrentPage("landing"); closeMobileMenu(); window.scrollTo(0, 0); }}>
+                onClick={(e) => { e.preventDefault(); setCurrentPage("landing"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Home
               </a>
               <div className="mobile-nav-divider" />
@@ -412,11 +452,11 @@ function App() {
               </a>
               <div className="mobile-nav-divider" />
               <a href="#" className={`mobile-nav-link ${currentPage === "ourStory" ? "active" : ""}`}
-                onClick={(e) => { e.preventDefault(); setCurrentPage("ourStory"); closeMobileMenu(); window.scrollTo(0, 0); }}>
+                onClick={(e) => { e.preventDefault(); setCurrentPage("ourStory"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Our Story
               </a>
               <a href="#" className={`mobile-nav-link ${currentPage === "contact" ? "active" : ""}`}
-                onClick={(e) => { e.preventDefault(); setCurrentPage("contact"); closeMobileMenu(); window.scrollTo(0, 0); }}>
+                onClick={(e) => { e.preventDefault(); setCurrentPage("contact"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Contact
               </a>
             </div>
@@ -425,240 +465,241 @@ function App() {
       )}
 
       <main
-        key={currentPage} /* Force fresh animation on every page swap */
-        className={`main-content ${["landing", "ourStory", "contact"].includes(currentPage) ? "has-landing fade-in" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
+        className={`main-content ${["landing", "ourStory", "contact"].includes(currentPage) ? "has-landing" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
       >
-        {currentPage === "landing" && (
-          <LandingPage
-            onNavigateToProducts={handleNavigateToProducts}
-            scrollToSection={scrollToSection}
-            onNavigateToOurStory={() => { setCurrentPage("ourStory"); window.scrollTo(0, 0); }}
-          />
-        )}
-        {currentPage === "products" && (
-          <ProductsPage
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            onViewProduct={handleViewProduct}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            wishlist={wishlist}
-            onToggleWishlist={toggleWishlist}
-          />
-        )}
-        {currentPage === "details" && selectedProduct && (
-          <ProductDetails
-            key={selectedProduct.id}
-            product={selectedProduct}
-            cart={cart}
-            wishlist={wishlist}
-            onViewProduct={handleViewProduct}
-            onBack={() => setCurrentPage("products")}
-            onAddToCart={addToCart}
-            onGoToCart={() => { setCurrentPage("cartPage"); window.scrollTo(0, 0); }}
-            onToggleWishlist={toggleWishlist}
-          />
-        )}
-        {currentPage === "wishlist" && (
-          <WishlistPage
-            wishlist={wishlist}
-            onAddToCart={addToCart}
-            onRemove={toggleWishlist}
-            onViewProduct={handleViewProduct}
-            onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo(0, 0); }}
-          />
-        )}
-        {currentPage === "cartPage" && (
-          <CartPage
-            cart={cart}
-            onUpdateQuantity={updateQuantity}
-            onRemove={removeFromCart}
-            onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo(0, 0); }}
-            onProceedToCheckout={goToCheckout}
-          />
-        )}
-        {currentPage === "ourStory" && <OurStory />}
-        {currentPage === "contact" && <Contact />}
-        {currentPage === "checkout" && (
-          <Checkout
-            cart={cart}
-            details={checkoutDetails}
-            onDetailsChange={handleDetailsChange}
-            onBackToCart={() => {
-              setCurrentPage("cartPage");
-              window.scrollTo(0, 0);
-            }}
-            onContinue={goToDelivery}
-          />
-        )}
-        {currentPage === "delivery" && (
-          <Delivery
-            cart={cart}
-            details={checkoutDetails}
-            selectedMethod={deliveryMethod}
-            onSelectMethod={setDeliveryMethod}
-            onBack={() => {
-              setCurrentPage("checkout");
-              window.scrollTo(0, 0);
-            }}
-            onContinue={handleDeliveryContinue}
-          />
-        )}
-        {currentPage === "payment" && (
-          <Payment
-            cart={cart}
-            details={checkoutDetails}
-            selectedMethod={deliveryMethod}
-            onBack={() => {
-              setCurrentPage("delivery");
-              window.scrollTo(0, 0);
-            }}
-            onPlaceOrder={() => {
-              const newOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
-              console.log("Order placed! ID:", newOrderId);
-              setLastOrderId(newOrderId);
-              setCart([]);
-              setCurrentPage("orderConfirmation");
-              window.scrollTo(0, 0);
-            }}
-          />
-        )}
-        {currentPage === "orderConfirmation" && (
-          <OrderConfirmation
-            orderId={lastOrderId}
-            onContinueShopping={() => {
-              setCurrentPage("products");
-              setActiveCategory("All");
-              window.scrollTo(0, 0);
-            }}
-            onReturnHome={() => {
-              setCurrentPage("landing");
-              window.scrollTo(0, 0);
-            }}
-          />
-        )}
-        {currentPage === "auth" && (
-          <div className="auth-fullscreen">
-            <div className="auth-container">
-              <div className="auth-card">
-                <div className="card-left">
-                  <img src="/vegetables.png" alt="Nature" className="hero-img" />
-                </div>
-                <div className="card-right">
-                  <div className="form-wrapper">
-                    <h1 className="auth-title">
-                      {isSignIn ? "Sign In" : "Create Account"}
-                    </h1>
-                    <p className="auth-subtitle">
-                      {isSignIn ? "Don't have an account? " : "Already have an account? "}
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setIsSignIn(!isSignIn);
-                        }}
-                      >
-                        {isSignIn ? "Sign up" : "Sign in"}
-                      </a>
-                    </p>
+        <div key={currentPage} className="page-transition-wrapper fade-in">
+          {currentPage === "landing" && (
+            <LandingPage
+              onNavigateToProducts={handleNavigateToProducts}
+              scrollToSection={scrollToSection}
+              onNavigateToOurStory={() => { setCurrentPage("ourStory"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            />
+          )}
+          {currentPage === "products" && (
+            <ProductsPage
+              activeCategory={activeCategory}
+              setActiveCategory={setActiveCategory}
+              onViewProduct={handleViewProduct}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              wishlist={wishlist}
+              onToggleWishlist={toggleWishlist}
+            />
+          )}
+          {currentPage === "details" && selectedProduct && (
+            <ProductDetails
+              key={selectedProduct.id}
+              product={selectedProduct}
+              cart={cart}
+              wishlist={wishlist}
+              onViewProduct={handleViewProduct}
+              onBack={() => setCurrentPage("products")}
+              onAddToCart={addToCart}
+              onGoToCart={() => { setCurrentPage("cartPage"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onToggleWishlist={toggleWishlist}
+            />
+          )}
+          {currentPage === "wishlist" && (
+            <WishlistPage
+              wishlist={wishlist}
+              onAddToCart={addToCart}
+              onRemove={toggleWishlist}
+              onViewProduct={handleViewProduct}
+              onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            />
+          )}
+          {currentPage === "cartPage" && (
+            <CartPage
+              cart={cart}
+              onUpdateQuantity={updateQuantity}
+              onRemove={removeFromCart}
+              onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onProceedToCheckout={goToCheckout}
+            />
+          )}
+          {currentPage === "ourStory" && <OurStory />}
+          {currentPage === "contact" && <Contact />}
+          {currentPage === "checkout" && (
+            <Checkout
+              cart={cart}
+              details={checkoutDetails}
+              onDetailsChange={handleDetailsChange}
+              onBackToCart={() => {
+                setCurrentPage("cartPage");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onContinue={goToDelivery}
+            />
+          )}
+          {currentPage === "delivery" && (
+            <Delivery
+              cart={cart}
+              details={checkoutDetails}
+              selectedMethod={deliveryMethod}
+              onSelectMethod={setDeliveryMethod}
+              onBack={() => {
+                setCurrentPage("checkout");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onContinue={handleDeliveryContinue}
+            />
+          )}
+          {currentPage === "payment" && (
+            <Payment
+              cart={cart}
+              details={checkoutDetails}
+              selectedMethod={deliveryMethod}
+              onBack={() => {
+                setCurrentPage("delivery");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onPlaceOrder={() => {
+                const newOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
+                console.log("Order placed! ID:", newOrderId);
+                setLastOrderId(newOrderId);
+                setCart([]);
+                setCurrentPage("orderConfirmation");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
+          {currentPage === "orderConfirmation" && (
+            <OrderConfirmation
+              orderId={lastOrderId}
+              onContinueShopping={() => {
+                setCurrentPage("products");
+                setActiveCategory("All");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onReturnHome={() => {
+                setCurrentPage("landing");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
+          {currentPage === "auth" && (
+            <div className="auth-fullscreen">
+              <div className="auth-container">
+                <div className="auth-card">
+                  <div className="card-left">
+                    <img src="/vegetables.png" alt="Nature" className="hero-img" />
+                  </div>
+                  <div className="card-right">
+                    <div className="form-wrapper">
+                      <h1 className="auth-title">
+                        {isSignIn ? "Sign In" : "Create Account"}
+                      </h1>
+                      <p className="auth-subtitle">
+                        {isSignIn ? "Don't have an account? " : "Already have an account? "}
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setIsSignIn(!isSignIn);
+                          }}
+                        >
+                          {isSignIn ? "Sign up" : "Sign in"}
+                        </a>
+                      </p>
 
-                    <form
-                      className="auth-form"
-                      onSubmit={handleAuth}
-                    >
-                      {!isSignIn && (
+                      <form
+                        className="auth-form"
+                        onSubmit={handleAuth}
+                      >
+                        {!isSignIn && (
+                          <div className="auth-input-group">
+                            <label>Full Name</label>
+                            <div className="auth-input">
+                              <User size={20} color="#868889" />
+                              <input type="text" placeholder="Your Name" />
+                            </div>
+                          </div>
+                        )}
+
                         <div className="auth-input-group">
-                          <label>Full Name</label>
+                          <label>Email Address</label>
                           <div className="auth-input">
-                            <User size={20} color="#868889" />
-                            <input type="text" placeholder="Your Name" />
+                            <Mail size={20} color="#868889" />
+                            <input type="email" placeholder="you@example.com" />
                           </div>
                         </div>
-                      )}
 
-                      <div className="auth-input-group">
-                        <label>Email Address</label>
-                        <div className="auth-input">
-                          <Mail size={20} color="#868889" />
-                          <input type="email" placeholder="you@example.com" />
-                        </div>
-                      </div>
-
-                      <div className="auth-input-group">
-                        <label>Password</label>
-                        <div className="auth-input">
-                          <Lock size={20} color="#868889" />
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                          />
-                          <button
-                            type="button"
-                            className="auth-toggle-password"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? (
-                              <EyeOff size={20} color="#868889" />
-                            ) : (
-                              <Eye size={20} color="#868889" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {!isSignIn && (
                         <div className="auth-input-group">
-                          <label>Confirm Password</label>
+                          <label>Password</label>
                           <div className="auth-input">
                             <Lock size={20} color="#868889" />
                             <input
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
                             />
+                            <button
+                              type="button"
+                              className="auth-toggle-password"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff size={20} color="#868889" />
+                              ) : (
+                                <Eye size={20} color="#868889" />
+                              )}
+                            </button>
                           </div>
                         </div>
-                      )}
 
-                      <button type="submit" className="auth-submit" disabled={isLoggingIn}>
-                        {isLoggingIn ? (
-                          <>
-                            <div className="spinner-small" />
-                            {isSignIn ? "Signing In..." : "Creating Account..."}
-                          </>
-                        ) : (
-                          <>
-                            {isSignIn ? "Sign In" : "Create Account"} <ArrowRight size={18} />
-                          </>
+                        {!isSignIn && (
+                          <div className="auth-input-group">
+                            <label>Confirm Password</label>
+                            <div className="auth-input">
+                              <Lock size={20} color="#868889" />
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                              />
+                            </div>
+                          </div>
                         )}
-                      </button>
 
-                      <div className="auth-divider">
-                        <span>Or join with</span>
-                      </div>
+                        <button type="submit" className="auth-submit" disabled={isLoggingIn}>
+                          {isLoggingIn ? (
+                            <>
+                              <div className="spinner-small" />
+                              {isSignIn ? "Signing In..." : "Creating Account..."}
+                            </>
+                          ) : (
+                            <>
+                              {isSignIn ? "Sign In" : "Create Account"} <ArrowRight size={18} />
+                            </>
+                          )}
+                        </button>
 
-                      <div className="auth-social">
-                        <button type="button" className="auth-social-btn google">
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
-                            alt="Google"
-                          />
-                          Google
-                        </button>
-                        <button type="button" className="auth-social-btn facebook">
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg"
-                            alt="Facebook"
-                          />
-                          Facebook
-                        </button>
-                      </div>
-                    </form>
+                        <div className="auth-divider">
+                          <span>Or join with</span>
+                        </div>
+
+                        <div className="auth-social">
+                          <button type="button" className="auth-social-btn google">
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+                              alt="Google"
+                            />
+                            Google
+                          </button>
+                          <button type="button" className="auth-social-btn facebook">
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg"
+                              alt="Facebook"
+                            />
+                            Facebook
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {currentPage !== "auth" && (
