@@ -115,12 +115,15 @@ function App() {
       email: email
     };
 
-    localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    setIsLoggingIn(false);
-    window.scrollTo(0, 0);
-    setCurrentPage("landing");
+    // Subtle delay to allow UI states to sync smoothly
+    setTimeout(() => {
+      localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      setIsLoggingIn(false);
+      window.scrollTo(0, 0);
+      setCurrentPage("landing");
+    }, 100);
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
@@ -469,7 +472,7 @@ function App() {
       <main
         className={`main-content ${["landing", "ourStory", "contact", "auth"].includes(currentPage) ? "has-landing" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
       >
-        <div key={currentPage} className="page-transition-wrapper">
+        <div key={currentPage} className="page-transition-wrapper fade-in">
           {currentPage === "landing" && (
             <LandingPage
               onNavigateToProducts={handleNavigateToProducts}
