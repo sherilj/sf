@@ -481,31 +481,30 @@ body {
   margin: 0 !important;
 }
 
-/* Page Transition: Pure opacity, no layout shift, no blank frame */
+/* Page Transition: Smooth opacity fade without layout shift */
 .page-transition-wrapper {
-  display: contents;
-  /* Does NOT create a new box, so no layout shift */
+  display: block;
+  width: 100%;
+  min-height: 100%;
 }
 
 .page-transition-wrapper>* {
-  animation: pageAppear 0.2s ease-out forwards;
+  animation: pageAppear 0.15s ease-out forwards;
 }
 
 @keyframes pageAppear {
   from {
     opacity: 0;
-    transform: translateY(5px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 /* Keep fade-in class for legacy - now uses same animation */
 .fade-in {
-  animation: pageAppear 0.2s ease-out forwards;
+  animation: pageAppear 0.15s ease-out forwards;
 }
 
 /* Initial Full-Page Loader */
