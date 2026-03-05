@@ -1,6 +1,22 @@
 import React, { useState } from "react";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 
+const ImageWithLoader = ({ src, alt, className }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className={`image-placeholder ${className}`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onLoad={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+      />
+    </>
+  );
+};
+
 const Contact = () => {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -30,10 +46,10 @@ const Contact = () => {
       <section className="contact-hero-section">
         {/* Palm Leaves Decorations */}
         <div className="palm-decoration palm-left">
-          <img src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
+          <ImageWithLoader src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
         </div>
         <div className="palm-decoration palm-right">
-          <img src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
+          <ImageWithLoader src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
         </div>
 
         <div className="contact-hero-content">
@@ -49,7 +65,7 @@ const Contact = () => {
           </p>
           
           <div className="contact-hero-illustration">
-            <img src="/contact-scroll-illustration.png" alt="Contact scroll illustration" />
+            <ImageWithLoader src="/contact-scroll-illustration.png" alt="Contact scroll illustration" />
           </div>
         </div>
       </section>

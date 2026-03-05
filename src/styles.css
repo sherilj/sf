@@ -543,6 +543,25 @@ img {
   min-height: 300px;
 }
 
+/* Our Story page - reserve space for images */
+.hero-book-illustration {
+  min-height: 250px;
+}
+
+.promise-story-image {
+  min-height: 300px;
+}
+
+/* Contact page - reserve space for images */
+.contact-hero-illustration {
+  min-height: 200px;
+}
+
+.palm-decoration {
+  min-height: 150px;
+  min-width: 100px;
+}
+
 /* Keep fade-in class for legacy - now uses same animation */
 .fade-in {
   animation: pageAppear 0.15s ease-out forwards;
