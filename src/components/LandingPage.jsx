@@ -1,5 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { Leaf, ShieldCheck, Zap, CheckCircle } from "lucide-react";
+
+const ImageWithLoader = ({ src, alt, className }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className={`image-placeholder ${className}`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onLoad={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+      />
+    </>
+  );
+};
 
 const LandingPage = ({ onNavigateToProducts, scrollToSection, onNavigateToOurStory }) => {
   return (

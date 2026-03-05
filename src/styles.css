@@ -502,6 +502,47 @@ body {
   }
 }
 
+/* Prevent layout shift from images loading */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Image placeholder to prevent CLS during load */
+.image-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Reserve space for hero image to prevent CLS */
+.hero-image-container {
+  min-height: 400px;
+}
+
+/* Reserve space for product images */
+.product-image-wrap {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reserve space for essentials image */
+.essentials-image {
+  min-height: 300px;
+}
+
+/* Reserve space for promise image */
+.promise-image {
+  min-height: 300px;
+}
+
 /* Keep fade-in class for legacy - now uses same animation */
 .fade-in {
   animation: pageAppear 0.15s ease-out forwards;
