@@ -1,5 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { Check } from "lucide-react";
+
+const ImageWithLoader = ({ src, alt, className }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className={`image-placeholder ${className}`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onLoad={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+      />
+    </>
+  );
+};
 
 const OurStory = () => {
   return (
@@ -12,7 +28,7 @@ const OurStory = () => {
           <h1 className="story-hero-title">Our Story</h1>
           <p className="story-hero-subtitle">Fresh By Nature, Bringing you pure</p>
           <div className="hero-book-illustration">
-            <img src="/story-book-hero.png" alt="Ayurvedic herbs and book illustration" />
+            <ImageWithLoader src="/story-book-hero.png" alt="Ayurvedic herbs and book illustration" />
           </div>
         </div>
       </section>
@@ -21,7 +37,7 @@ const OurStory = () => {
       <section className="promise-section-story">
         <div className="promise-story-container">
           <div className="promise-story-image">
-            <img src="/wild_honey.png" alt="Honey jar with honey dipper" />
+            <ImageWithLoader src="/wild_honey.png" alt="Honey jar with honey dipper" />
           </div>
           <div className="promise-story-content">
             <h4 className="subtitle-promise">OUR PROMISE</h4>

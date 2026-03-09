@@ -342,40 +342,37 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                 </div>
             </div>
 
-            {/* Zomato/Swiggy Style Recommended Section */}
+            {/* "You May Also Like" Section - Matching Reference Image */}
             <div className="pd-related">
-                <div className="related-header">
-                    <h2>Explore More Categories</h2>
-                    <button className="view-all" onClick={onBack}>SEE ALL PRODUCTS</button>
+                <div className="related-main-header-center">
+                    <h2 className="serif-title">You May Also Like</h2>
+                    <button className="view-all-link" onClick={onBack}>VIEW ALL</button>
                 </div>
 
-                {["Honey", "Chikki", "Ghee"].map(catName => {
-                    const catProducts = ALL_PRODUCTS.filter(p => p.category === catName && p.id !== product.id);
-                    if (catProducts.length === 0) return null;
-
-                    return (
-                        <div key={catName} className="related-category-block">
-                            <h3 className="related-cat-title">More in {catName}</h3>
-                            <div className="related-grid horizontal-scroll">
-                                {catProducts.map(p => (
-                                    <div key={p.id} className="mini-card" onClick={() => onViewProduct(p)} style={{ cursor: 'pointer' }}>
-                                        <div className="mini-img">
-                                            <img src={p.img} alt={p.name} />
-                                            {p.badgeRight && <span className="mini-badge">{p.badgeRight}</span>}
-                                        </div>
-                                        <div className="mini-info">
-                                            <h4>{p.name}</h4>
-                                            <div className="mini-price-row">
-                                                <span className="mini-price">₹{p.price}</span>
-                                                <ArrowRight size={14} className="mini-arrow" />
-                                            </div>
-                                        </div>
+                <div className="you-may-like-grid horizontal-scroll">
+                    {[
+                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Honey").slice(0, 3),
+                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Ghee").slice(0, 1),
+                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Chikki").slice(0, 1)
+                    ].map(p => (
+                        <div key={p.id} className="premium-mini-card" onClick={() => onViewProduct(p)}>
+                            <div className="p-mini-img-wrap">
+                                <img src={p.img} alt={p.name} />
+                                {p.badgeLeft && <span className="p-mini-discount">{p.badgeLeft}</span>}
+                            </div>
+                            <div className="p-mini-content">
+                                <h4 className="p-mini-name">{p.name}</h4>
+                                <span className="p-mini-cat">{p.category.toUpperCase()}</span>
+                                <div className="p-mini-bottom">
+                                    <span className="p-mini-price">₹{p.price}</span>
+                                    <div className="p-mini-arrow">
+                                        <ArrowRight size={14} />
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
             </div>
         </div>
     );
