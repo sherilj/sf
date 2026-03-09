@@ -731,7 +731,7 @@ img {
 
 .auth-title {
   color: #7C3225;
-  font-size: 32px;
+  font-size: 44px;
   font-weight: 700;
   margin-bottom: 8px;
   text-align: left;
@@ -806,7 +806,7 @@ img {
 
 .form-title {
   color: var(--text-brown);
-  font-size: 36px;
+  font-size: 44px;
   font-weight: 700;
   margin-bottom: 8px;
   letter-spacing: -0.5px;
@@ -862,7 +862,7 @@ img {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 0 16px;
-  height: 52px;
+  height: 64px;
   background: var(--input-bg);
   transition: border-color 0.2s;
 }
@@ -882,7 +882,7 @@ img {
   outline: none;
   background: transparent;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 17px;
   color: var(--text-primary);
   width: 100%;
 }
@@ -906,8 +906,8 @@ img {
   color: white;
   border: none;
   border-radius: 12px;
-  padding: 18px;
-  font-size: 14px;
+  padding: 20px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
@@ -1235,11 +1235,11 @@ img {
   background-color: #1AA60B;
   color: #FFF;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: 6px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   position: relative;
   z-index: 10;
   transition: all 0.3s ease;
@@ -5012,7 +5012,7 @@ main.main-content.has-landing {
 }
 
 .auth-input-group label {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -5044,12 +5044,12 @@ main.main-content.has-landing {
 
 .auth-input input {
   width: 100%;
-  padding: 14px 15px 14px 48px;
+  padding: 16px 15px 16px 48px;
   border: none;
   background: transparent;
   outline: none;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: #333;
 }
 
@@ -5186,5 +5186,185 @@ main.main-content.has-landing {
 
   .auth-title {
     font-size: 1.8rem;
+  }
+}
+
+/* Layout adjustments: expand central white container to match header width
+   and set left/right split to 45% / 55% for auth (Sign In) and signup pages.
+   This preserves rounded corners, background color and existing controls. */
+.auth-container,
+.signup-container {
+  max-width: 1300px; /* match .header-inner */
+  margin: 0 auto;
+  width: 100%;
+}
+
+.auth-card {
+  border-radius: 40px; /* preserve rounded corners */
+}
+
+.auth-card > .card-left {
+  flex: 0 0 45%;
+}
+
+.auth-card > .card-right {
+  flex: 0 0 55%;
+}
+
+/* Signup split */
+.signup-card {
+  display: flex;
+}
+
+.signup-left {
+  flex: 0 0 45%;
+  position: relative;
+}
+
+.signup-right {
+  flex: 0 0 55%;
+}
+
+/* Ensure hero images keep cover behavior */
+.auth-card .hero-img,
+.signup-left .hero-image,
+.card-left .hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ======= Overrides: larger form typography & controls =======
+   Ensures Sign In and Create Account headings, labels, inputs and buttons
+   are visibly larger and more accessible. Uses !important to override
+   earlier rules without requiring exact context edits.
+*/
+.auth-title,
+.form-title {
+  font-size: 44px !important;
+  line-height: 1.05 !important;
+}
+
+.auth-subtitle,
+.form-subtitle,
+.muted {
+  font-size: 16px !important;
+}
+
+.auth-input-group label,
+.input-group label,
+.input-label {
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+}
+
+.auth-input input,
+.input-field input,
+.signup-form input,
+.signup-form textarea {
+  font-size: 18px !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+  height: 64px !important;
+}
+
+.auth-submit,
+.submit-btn,
+.btn-primary,
+.btn-outline {
+  font-size: 1.05rem !important;
+  padding: 16px 22px !important;
+}
+
+/* Ensure social btn text remains prominent */
+.social-buttons .btn-outline,
+.auth-social-btn {
+  font-size: 1.05rem !important;
+  padding: 14px 22px !important;
+}
+
+@media (max-width: 900px) {
+  .auth-title,
+  .form-title {
+    font-size: 34px !important;
+  }
+
+  .auth-input input,
+  .input-field input {
+    font-size: 16px !important;
+    height: 56px !important;
+  }
+
+  .auth-submit,
+  .submit-btn,
+  .btn-primary,
+  .btn-outline {
+    font-size: 1rem !important;
+    padding: 12px 18px !important;
+  }
+}
+
+/* ======= Make form contents wider inside the card (not taller) =======
+   - reduce side padding inside right column so inputs/buttons span more width
+   - keep control heights (no taller textboxes/buttons)
+   - make primary and submit buttons full width
+   - allow social outline buttons to flex and fill available width
+*/
+.auth-card > .card-right .form-wrapper,
+.signup-card .signup-right-inner {
+  padding-left: 36px !important;
+  padding-right: 36px !important;
+  max-width: 860px;
+  width: 100%;
+}
+
+.card-right,
+.signup-right {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Keep inputs at original (not taller) height but allow wider content */
+.auth-input input,
+.input-field input,
+.signup-form input,
+.signup-form textarea {
+  height: 52px !important;
+  font-size: 16px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.input-field {
+  height: 52px !important;
+}
+
+/* Make create / submit buttons expand to full width of form area */
+.btn-primary,
+.auth-submit,
+.submit-btn {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Let outline/social buttons stretch and share available width */
+.social-buttons .btn-outline,
+.signup .social-buttons .btn-outline,
+.auth-social-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .auth-card > .card-right .form-wrapper,
+  .signup-card .signup-right-inner {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .social-buttons .btn-outline,
+  .auth-social-btn {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 }
