@@ -4936,7 +4936,7 @@ main.main-content.has-landing {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid #F0F0F0;
+  border: 1px solid #E0E0E0;
   border-radius: 12px;
   background: #FFF;
   transition: all 0.3s ease;
@@ -5058,6 +5058,15 @@ main.main-content.has-landing {
 .auth-social-btn img {
   width: 20px;
   height: 20px;
+}
+
+/* Slightly darker styling for Google social button to improve prominence */
+.auth-social-btn.google {
+  border-color: #D2B5AA;
+}
+
+.auth-social-btn.google:hover {
+  border-color: #C89E95;
 }
 
 /* Responsive Auth */

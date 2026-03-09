@@ -1,7 +1,128 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
-const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword }) => {
+const OTP_ATTEMPTS_KEY = "otp_attempts"; // will store object { [phone]: [timestamps] }
+
+const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword, onOTPVerified }) => {
+    const [stage, setStage] = useState("phone"); // 'phone' or 'otp'
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [otp, setOtp] = useState("");
+    const [timer, setTimer] = useState(60);
+    const [resendDisabled, setResendDisabled] = useState(true);
+    const [error, setError] = useState("");
+    const [attemptsExceeded, setAttemptsExceeded] = useState(false);
+    const timerRef = useRef(null);
+
+    useEffect(() => {
+        if (stage === "otp") startTimer();
+        return () => clearInterval(timerRef.current);
+    }, [stage]);
+
+    useEffect(() => {
+        if (timer <= 0) {
+            setResendDisabled(false);
+            clearInterval(timerRef.current);
+        }
+    }, [timer]);
+
+    const startTimer = () => {
+        setTimer(60);
+        setResendDisabled(true);
+        clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => {
+            setTimer(prev => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
+    const loadAttempts = () => {
+        try {
+            const raw = localStorage.getItem(OTP_ATTEMPTS_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) { return {}; }
+    };
+
+    const saveAttempts = (data) => {
+        localStorage.setItem(OTP_ATTEMPTS_KEY, JSON.stringify(data));
+    };
+
+    const pruneAttempts = (arr) => arr.filter(ts => (Date.now() - ts) < 3600 * 1000);
+
+    const canAttempt = (phoneNumber) => {
+        const data = loadAttempts();
+        const arr = pruneAttempts(data[phoneNumber] || []);
+        return arr.length < 3;
+    };
+
+    const recordAttempt = (phoneNumber) => {
+        const data = loadAttempts();
+        const arr = pruneAttempts(data[phoneNumber] || []);
+        arr.push(Date.now());
+        data[phoneNumber] = arr;
+        saveAttempts(data);
+    };
+
+    const handleSendOtp = (e) => {
+        e && e.preventDefault();
+        setError("");
+        const normalized = phone.replace(/\D/g, "");
+        if (normalized.length !== 10) {
+            setError("Please enter a valid 10-digit phone number.");
+            return;
+        }
+        if (!isSignIn) {
+            if (!name.trim()) {
+                setError("Please enter your full name.");
+                return;
+            }
+        }
+        const phoneKey = `+91${normalized}`;
+        if (!canAttempt(phoneKey)) {
+            setAttemptsExceeded(true);
+            setError("Maximum attempts reached. Please try again in 1 hour.");
+            return;
+        }
+        // Mock sending OTP
+        recordAttempt(phoneKey);
+        setStage("otp");
+        setOtp("");
+        startTimer();
+    };
+
+    const handleResend = (e) => {
+        e && e.preventDefault();
+        if (resendDisabled) return;
+        const normalized = phone.replace(/\D/g, "");
+        const phoneKey = `+91${normalized}`;
+        if (!canAttempt(phoneKey)) {
+            setAttemptsExceeded(true);
+            setError("Maximum attempts reached. Please try again in 1 hour.");
+            return;
+        }
+        recordAttempt(phoneKey);
+        setError("");
+        startTimer();
+    };
+
+    const handleVerifyOtp = (e) => {
+        e && e.preventDefault();
+        // Mock verification success if otp length 4+ or 6; accept any input for now
+        const normalizedOtp = otp.replace(/\D/g, "");
+        if (normalizedOtp.length < 4) {
+            setError("Please enter the OTP.");
+            return;
+        }
+        // On success, notify parent to navigate to Home and pass name when registering
+        const phoneKey = `+91${phone.replace(/\D/g, "")}`;
+        onOTPVerified && onOTPVerified(phoneKey, isSignIn ? undefined : name.trim());
+    };
+
     return (
         <div className="auth-fullscreen">
             <div className="auth-container">
@@ -34,93 +155,78 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                 </span>
                             </p>
 
-                            <form className="auth-form" onSubmit={handleAuth}>
+                            <form className="auth-form" onSubmit={stage === "phone" ? handleSendOtp : handleVerifyOtp}>
+                                {/* Full Name for registration (above phone) */}
                                 {!isSignIn && (
                                     <div className="auth-input-group">
                                         <label>Full Name</label>
                                         <div className="auth-input">
-                                            <User size={20} color="#868889" />
                                             <input
                                                 name="fullname"
                                                 type="text"
-                                                placeholder="Your Name"
+                                                placeholder="Your full name"
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
                                                 required
                                             />
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Phone input with +91 prefix */}
                                 <div className="auth-input-group">
-                                    <label>Email Address</label>
-                                    <div className="auth-input">
-                                        <Mail size={20} color="#868889" />
+                                    <label>Phone Number</label>
+                                    <div className="auth-input" style={{ alignItems: 'center', gap: 8 }}>
+                                        <span style={{ background: '#F6F3F1', padding: '8px 10px', borderRadius: 8, color: '#7C3225', fontWeight: 700 }}>+91</span>
                                         <input
-                                            name="email"
-                                            type="email"
-                                            placeholder="you@example.com"
+                                            name="phone"
+                                            type="tel"
+                                            placeholder="10-digit number"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
                                             required
+                                            maxLength={12}
+                                            style={{ flex: 1 }}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="auth-input-group">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <label>Password</label>
-                                        {isSignIn && (
-                                            <a href="#" style={{ fontSize: '0.75rem', color: '#7C3225', textDecoration: 'none', fontWeight: '700' }}>
-                                                Forgot Password?
-                                            </a>
-                                        )}
-                                    </div>
-                                    <div className="auth-input">
-                                        <Lock size={20} color="#868889" />
-                                        <input
-                                            name="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            className="auth-toggle-password"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff size={20} color="#868889" />
-                                            ) : (
-                                                <Eye size={20} color="#868889" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {!isSignIn && (
+                                {stage === "otp" && (
                                     <div className="auth-input-group">
-                                        <label>Confirm Password</label>
+                                        <label>Enter OTP</label>
                                         <div className="auth-input">
-                                            <Lock size={20} color="#868889" />
                                             <input
-                                                name="confirmPassword"
-                                                type={showPassword ? "text" : "password"}
-                                                placeholder="••••••••"
-                                                required
+                                                name="otp"
+                                                type="text"
+                                                placeholder="6-digit OTP"
+                                                value={otp}
+                                                onChange={(e) => setOtp(e.target.value)}
+                                                maxLength={6}
                                             />
+                                        </div>
+
+                                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <button className="auth-link" onClick={handleResend} disabled={resendDisabled} style={{ background: 'none', border: 'none', color: resendDisabled ? '#C8A79C' : '#7C3225', cursor: resendDisabled ? 'default' : 'pointer', padding: 0 }}>
+                                                Resend OTP
+                                            </button>
+                                            <span style={{ color: '#868889', fontSize: 13 }}>{timer > 0 ? `00:${String(timer).padStart(2, '0')}` : ''}</span>
                                         </div>
                                     </div>
                                 )}
 
-                                <button type="submit" className="auth-submit" disabled={isLoggingIn}>
-                                    {isLoggingIn ? (
-                                        <>
-                                            <div className="spinner-small" />
-                                            {isSignIn ? "Signing In..." : "Creating Account..."}
-                                        </>
-                                    ) : (
-                                        <>
-                                            {isSignIn ? "Sign In" : "Create Account"} <ArrowRight size={18} />
-                                        </>
-                                    )}
-                                </button>
+                                {error && <div style={{ color: '#B02A2A', marginBottom: 10 }}>{error}</div>}
+
+                                {stage === 'phone' && (
+                                    <button type="submit" className="auth-submit">
+                                        SEND OTP <ArrowRight size={18} />
+                                    </button>
+                                )}
+
+                                {stage === 'otp' && (
+                                    <button type="submit" className="auth-submit">
+                                        {isSignIn ? "VERIFY OTP" : "VERIFY & REGISTER"} <ArrowRight size={18} />
+                                    </button>
+                                )}
 
                                 <div className="auth-divider">
                                     <span>{isSignIn ? "Or continue with" : "Or join with"}</span>
@@ -133,13 +239,6 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                             alt="Google"
                                         />
                                         Google
-                                    </button>
-                                    <button type="button" className="auth-social-btn facebook">
-                                        <img
-                                            src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg"
-                                            alt="Facebook"
-                                        />
-                                        Facebook
                                     </button>
                                 </div>
                             </form>

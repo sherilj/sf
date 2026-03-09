@@ -123,6 +123,18 @@ function App() {
     setCurrentPage("landing");
   };
 
+  const handleOTPVerified = (phone, fullName) => {
+    const mockUser = {
+      name: fullName || "Valued Member",
+      phone: phone
+    };
+    localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
+    setUser(mockUser);
+    setIsAuthenticated(true);
+    setCurrentPage("landing");
+    window.scrollTo(0, 0);
+  };
+
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const handleNavigateToProducts = (category = "All") => {
@@ -588,6 +600,7 @@ function App() {
               isLoggingIn={isLoggingIn}
               showPassword={showPassword}
               setShowPassword={setShowPassword}
+              onOTPVerified={handleOTPVerified}
             />
           )}
         </div>
