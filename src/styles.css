@@ -5034,7 +5034,7 @@ main.main-content.has-landing {
   background: #FFF;
   transition: all 0.3s ease;
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
 }
 
 .auth-input:focus-within {
@@ -5088,6 +5088,8 @@ main.main-content.has-landing {
   justify-content: center;
   gap: 12px;
   transition: all 0.3s ease;
+  width: 100%;
+  max-width: 360px;
 }
 
 .auth-submit:hover:not(:disabled) {
@@ -5108,7 +5110,7 @@ main.main-content.has-landing {
   margin: 10px 0;
   color: #CDBEAF;
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
   font-size: 0.85rem;
 }
 
@@ -5127,15 +5129,18 @@ main.main-content.has-landing {
 .auth-social {
   display: flex;
   gap: 15px;
+  width: 100%;
+  max-width: 360px;
+  justify-content: center;
 }
 
 .auth-social-btn {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 12px;
+  padding: 12px 32px;
   border: 1px solid #F0F0F0;
   border-radius: 12px;
   background: #FFF;
@@ -5358,7 +5363,6 @@ main.main-content.has-landing {
 
 /* Make create / submit buttons content-width */
 .btn-primary,
-.auth-submit,
 .submit-btn {
   width: fit-content !important;
   max-width: none !important;
@@ -5366,10 +5370,17 @@ main.main-content.has-landing {
   justify-content: flex-start;
 }
 
+.auth-submit {
+  width: 100% !important;
+  max-width: 360px !important;
+  justify-content: center !important;
+}
+
 .auth-social {
   display: flex !important;
-  justify-content: flex-start;
+  justify-content: center !important;
   width: 100%;
+  max-width: 360px !important;
 }
 
 /* Let outline/social buttons be content-width */

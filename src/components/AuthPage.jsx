@@ -1,14 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import axios from "axios";
 
 const OTP_ATTEMPTS_KEY = "otp_attempts"; // will store object { [phone]: [timestamps] }
+const API_BASE_URL = "https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev";
 
 const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword, onOTPVerified }) => {
     const [stage, setStage] = useState("phone"); // 'phone' or 'otp'
+    const [isLoading, setIsLoading] = useState(false);
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
     const [otp, setOtp] = useState("");
-    const [timer, setTimer] = useState(60);
+    const [timer, setTimer] = useState(90);
     const [resendDisabled, setResendDisabled] = useState(true);
     const [error, setError] = useState("");
     const [attemptsExceeded, setAttemptsExceeded] = useState(false);
@@ -27,7 +30,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
     }, [timer]);
 
     const startTimer = () => {
-        setTimer(60);
+        setTimer(90);
         setResendDisabled(true);
         clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
@@ -68,7 +71,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
         saveAttempts(data);
     };
 
-    const handleSendOtp = (e) => {
+    const handleSendOtp = async (e) => {
         e && e.preventDefault();
         setError("");
         const normalized = phone.replace(/\D/g, "");
@@ -88,16 +91,27 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
             setError("Maximum attempts reached. Please try again in 1 hour.");
             return;
         }
-        // Mock sending OTP
-        recordAttempt(phoneKey);
-        setStage("otp");
-        setOtp("");
-        startTimer();
+
+        setIsLoading(true);
+        try {
+            await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+                mobileNumber: phoneKey,
+                name: !isSignIn ? name.trim() : undefined
+            });
+            recordAttempt(phoneKey);
+            setStage("otp");
+            setOtp("");
+            startTimer();
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || "Failed to send OTP. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleResend = (e) => {
+    const handleResend = async (e) => {
         e && e.preventDefault();
-        if (resendDisabled) return;
+        if (resendDisabled || isLoading) return;
         const normalized = phone.replace(/\D/g, "");
         const phoneKey = `+91${normalized}`;
         if (!canAttempt(phoneKey)) {
@@ -105,22 +119,49 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
             setError("Maximum attempts reached. Please try again in 1 hour.");
             return;
         }
-        recordAttempt(phoneKey);
-        setError("");
-        startTimer();
+
+        setIsLoading(true);
+        try {
+            await axios.post(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+                mobileNumber: phoneKey
+            });
+            recordAttempt(phoneKey);
+            setError("");
+            startTimer();
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || "Failed to resend OTP.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleVerifyOtp = (e) => {
+    const handleVerifyOtp = async (e) => {
         e && e.preventDefault();
-        // Mock verification success if otp length 4+ or 6; accept any input for now
         const normalizedOtp = otp.replace(/\D/g, "");
         if (normalizedOtp.length < 4) {
             setError("Please enter the OTP.");
             return;
         }
-        // On success, notify parent to navigate to Home and pass name when registering
+        if (timer <= 0) {
+            setError("OTP has expired. Please request a new one.");
+            return;
+        }
         const phoneKey = `+91${phone.replace(/\D/g, "")}`;
-        onOTPVerified && onOTPVerified(phoneKey, isSignIn ? undefined : name.trim());
+
+        setIsLoading(true);
+        try {
+            const res = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+                mobileNumber: phoneKey,
+                otpCode: normalizedOtp,
+                name: !isSignIn ? name.trim() : undefined
+            });
+            // Assume the API might set cookies or return a token, or we just proceed to app
+            onOTPVerified && onOTPVerified(phoneKey, isSignIn ? undefined : name.trim());
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || "Invalid OTP. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -222,14 +263,18 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                                 {error && <div style={{ color: '#B02A2A', marginBottom: 10 }}>{error}</div>}
 
                                 {stage === 'phone' && (
-                                    <button type="submit" className="auth-submit">
-                                        SEND OTP <ArrowRight size={18} />
+                                    <button type="submit" className="auth-submit" disabled={isLoading}>
+                                        {isLoading ? "SENDING..." : (
+                                            <>SEND OTP <ArrowRight size={18} /></>
+                                        )}
                                     </button>
                                 )}
 
                                 {stage === 'otp' && (
-                                    <button type="submit" className="auth-submit">
-                                        {isSignIn ? "VERIFY OTP" : "VERIFY & REGISTER"} <ArrowRight size={18} />
+                                    <button type="submit" className="auth-submit" disabled={isLoading}>
+                                        {isLoading ? "VERIFYING..." : (
+                                            <>{isSignIn ? "VERIFY OTP" : "VERIFY & REGISTER"} <ArrowRight size={18} /></>
+                                        )}
                                     </button>
                                 )}
 
