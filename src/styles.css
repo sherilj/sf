@@ -5385,12 +5385,16 @@ main.main-content.has-landing {
 
 /* Let outline/social buttons be content-width */
 .social-buttons .btn-outline,
-.signup .social-buttons .btn-outline,
-.auth-social-btn {
+.signup .social-buttons .btn-outline {
   flex: 0 1 auto !important;
   width: fit-content !important;
   padding-left: 15px !important;
   padding-right: 15px !important;
+}
+
+.auth-social-btn {
+  width: 100% !important;
+  max-width: 360px !important;
 }
 
 @media (max-width: 900px) {
