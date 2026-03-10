@@ -7,6 +7,7 @@ import {
   Search,
   ShoppingCart,
   User,
+  Key,
   ChevronDown,
   Mail,
   Lock,
@@ -25,6 +26,8 @@ import CartPage from "./components/CartPage";
 import OurStory from "./components/OurStory";
 import Contact from "./components/Contact";
 import Checkout from "./components/Checkout";
+import ProfileModal from "./components/ProfileModal";
+import ProfileDetails from "./components/ProfileDetails";
 import Delivery from "./components/Delivery";
 import Payment from "./components/Payment";
 import OrderConfirmation from "./components/OrderConfirmation";
@@ -36,7 +39,7 @@ import SupportCenter from "./components/SupportCenter";
 function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignIn, setIsSignIn] = useState(true);
-  const [currentPage, setCurrentPage] = useState("auth"); // 'auth', 'landing', 'products', 'details', 'cartPage', 'ourStory', 'contact', 'checkout', 'delivery', 'payment', 'orderConfirmation'
+  const [currentPage, setCurrentPage] = useState("auth");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cart, setCart] = useState([]);
@@ -54,12 +57,30 @@ function App() {
   });
   const [deliveryMethod, setDeliveryMethod] = useState("standard");
   const [lastOrderId, setLastOrderId] = useState("#SV-431423");
+
+  // Profile state persisted separately
+  // keep profile in-memory only (no localStorage)
+  const [profile, setProfile] = useState({});
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  // API token persisted in localStorage (easy, insecure) but kept in state for runtime
+  const [apiToken, setApiTokenState] = useState(() => {
+    try {
+      return localStorage.getItem("svasthya_token") || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try { return !!localStorage.getItem("svasthya_user"); } catch { return false; }
+  });
+  const [user, setUser] = useState(() => {
+    try { const saved = localStorage.getItem("svasthya_user"); return saved ? JSON.parse(saved) : null; } catch { return null; }
+  });
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState(() => {
@@ -67,31 +88,15 @@ function App() {
     return savedOrders ? JSON.parse(savedOrders) : [];
   });
   const [supportInitialOrder, setSupportInitialOrder] = useState(null);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
 
   // Sync orders to localStorage
   useEffect(() => {
     localStorage.setItem("svasthya_orders", JSON.stringify(orders));
   }, [orders]);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage on mount (kept intentionally simple)
   useEffect(() => {
-    // Temporarily disabled so you can always see the login page on refresh!
-    // const savedUser = localStorage.getItem("svasthya_user");
-    // if (savedUser) {
-    //   try {
-    //     const parsedUser = JSON.parse(savedUser);
-    //     setUser(parsedUser);
-    //     setIsAuthenticated(true);
-    //     // Only jump to landing if we were on the auth page
-    //     if (currentPage === "auth") {
-    //       setCurrentPage("landing");
-    //     }
-    //   } catch (error) {
-    //     console.error("Failed to restore session:", error);
-    //     localStorage.removeItem("svasthya_user");
-    //   }
-    // }
-
     // Simulate a small delay for smooth entry
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
@@ -100,12 +105,72 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Persist profile helper - syncs with remote API and localStorage
+  const saveProfile = async (newProfile) => {
+    // show transient saving message
+    setSaveSuccessMessage("Saving profile...");
 
-  // Prevent body scroll when mobile menu is open
-  useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [isMobileMenuOpen]);
+    // require an auth token set in-memory (via header button)
+    const token = apiToken;
+    if (!token) {
+      setSaveSuccessMessage("");
+      alert("Missing auth token. Please set the API token via the header button before saving.");
+      throw new Error("Missing auth token");
+    }
+
+    try {
+      const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/users/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(newProfile),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      // prefer server response when available
+      let serverData = {};
+      try { serverData = await res.json(); } catch (e) { serverData = newProfile; }
+
+      const merged = { ...(profile || {}), ...serverData };
+      setProfile(merged);
+      setUser(prev => {
+        const updated = { ...(prev || {}), name: merged.name, email: merged.email };
+        localStorage.setItem("svasthya_user", JSON.stringify(updated));
+        return updated;
+      });
+      setShowProfileModal(false);
+
+      setSaveSuccessMessage("Profile changes saved");
+      setCurrentPage("landing");
+      setTimeout(() => setSaveSuccessMessage(""), 2500);
+    } catch (err) {
+      setSaveSuccessMessage("");
+      // show a simple error toast; keep modal open so user can retry
+      alert("Failed to update profile: " + (err.message || err));
+      throw err; // rethrow so callers can handle
+    }
+  };
+
+  const setApiToken = () => {
+    const existing = apiToken || "";
+    const token = window.prompt("Enter API Bearer token:", existing);
+    if (token === null) return; // cancelled
+    const trimmed = token.trim();
+    if (trimmed === "") {
+      setApiTokenState(null);
+      try { localStorage.removeItem("svasthya_token"); } catch (e) {}
+      setSaveSuccessMessage("API token removed");
+      setTimeout(() => setSaveSuccessMessage(""), 2000);
+      return;
+    }
+    setApiTokenState(trimmed);
+    try { localStorage.setItem("svasthya_token", trimmed); } catch (e) {}
+    setSaveSuccessMessage("API token saved");
+    setTimeout(() => setSaveSuccessMessage(""), 2000);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("svasthya_user");
@@ -133,9 +198,21 @@ function App() {
     setIsLoggingIn(false);
     window.scrollTo(0, 0);
     setCurrentPage("landing");
+
+    // Merge into profile storage if missing
+    const merged = { ...(profile || {}), name: mockUser.name || profile?.name, email: mockUser.email || profile?.email };
+    setProfile(merged);
+    // Show modal if profile incomplete (missing name or email)
+    if (!merged.name || !merged.email) {
+      setShowProfileModal(true);
+    }
   };
 
-  const handleOTPVerified = (phone, fullName) => {
+  const handleOTPVerified = (phone, fullName, token) => {
+    if (token) {
+      setApiTokenState(token);
+      localStorage.setItem("svasthya_token", token);
+    }
     const mockUser = {
       name: fullName || "Valued Member",
       phone: phone
@@ -144,13 +221,18 @@ function App() {
     setUser(mockUser);
     setIsAuthenticated(true);
     setCurrentPage("landing");
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const merged = { ...(profile || {}), name: mockUser.name || profile?.name };
+    setProfile(merged);
+    if (!merged.name || !merged.email) {
+      setShowProfileModal(true);
+    }
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const handleNavigateToProducts = (category = "All") => {
-    console.log('Navigating to products with category:', category);
     setActiveCategory(category);
     setCurrentPage("products");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -230,13 +312,11 @@ function App() {
 
   const handleDeliveryContinue = (method) => {
     setDeliveryMethod(method);
-    console.log("Proceeding to payment with", method);
     setCurrentPage("payment");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const scrollToSection = (sectionId) => {
-    console.log('Scrolling to section:', sectionId, 'Current page:', currentPage);
     if (currentPage !== "landing") {
       setCurrentPage("landing");
       setTimeout(() => {
@@ -266,9 +346,10 @@ function App() {
   }
 
   return (
-    <div
-      className="app-container"
-    >
+    <div className="app-container">
+      {saveSuccessMessage && (
+        <div className="fixed top-6 right-6 z-60 bg-emerald-600 text-white px-4 py-2 rounded-md shadow">{saveSuccessMessage}</div>
+      )}
       <header className="header">
         <div className="header-inner">
           <a
@@ -303,10 +384,7 @@ function App() {
               <a
                 href="#"
                 className={`nav-link ${["products", "details"].includes(currentPage) ? "active" : ""}`}
-                aria-current={[
-                  "products",
-                  "details",
-                ].includes(currentPage) ? "page" : undefined}
+                aria-current={["products", "details"].includes(currentPage) ? "page" : undefined}
                 onClick={(e) => {
                   e.preventDefault();
                   setCurrentPage("products");
@@ -410,6 +488,7 @@ function App() {
               <Heart size={22} color={wishlist.length > 0 ? "#7C3225" : "#4A4A4A"} fill={wishlist.length > 0 ? "#7C3225" : "none"} />
               {wishlist.length > 0 && <span className="cart-badge">{wishlist.length}</span>}
             </button>
+
             <button className="icon-btn cart-btn" onClick={() => { setCurrentPage("cartPage"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
               <ShoppingCart size={22} color="#4A4A4A" />
               <span className="cart-badge">{cart.reduce((total, item) => total + item.quantity, 0)}</span>
@@ -421,7 +500,12 @@ function App() {
                 </button>
                 <div className="dropdown-content user-dropdown-content">
                   <div className="user-info-header">
-                    <span className="user-name-label">{user?.name || "Member"}</span>
+                    <button
+                      className="user-name-label text-left w-full"
+                      onClick={(e) => { e.preventDefault(); setCurrentPage("profile"); }}
+                    >
+                      {user?.name || "Member"}
+                    </button>
                     <span className="user-email-label">{user?.email}</span>
                   </div>
                   <div className="mobile-nav-divider" style={{ margin: '8px 0' }} />
@@ -677,6 +761,9 @@ function App() {
               onOTPVerified={handleOTPVerified}
             />
           )}
+          {currentPage === "profile" && (
+            <ProfileDetails profile={profile} onSave={saveProfile} />
+          )}
         </div>
       </main>
 
@@ -742,6 +829,11 @@ function App() {
           <p>&copy; 2026 Svasthya Fresh. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Profile completion modal (non-dismissible until saved) */}
+      {showProfileModal && (
+        <ProfileModal initialProfile={profile} onSave={saveProfile} />
+      )}
     </div >
   );
 }
