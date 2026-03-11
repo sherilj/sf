@@ -92,61 +92,7 @@ const Checkout = ({
 
         <div className="checkout-grid">
           <div className="checkout-card">
-            <div>
-              <h2>Contact Information</h2>
-              <p>Stay in the loop with order status and delivery updates.</p>
-            </div>
-
             <form className="checkout-form" onSubmit={handleSubmit}>
-              <div className="form-row">
-                <div className="checkout-input-group">
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={details.email}
-                    onChange={(e) => onDetailsChange("email", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="checkout-input-group">
-                  <label htmlFor="phone">Phone</label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={details.phone}
-                    onChange={(e) => onDetailsChange("phone", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="checkout-input-group">
-                  <label htmlFor="firstName">First Name</label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    placeholder="John"
-                    value={details.firstName}
-                    onChange={(e) => onDetailsChange("firstName", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="checkout-input-group">
-                  <label htmlFor="lastName">Last Name</label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    placeholder="Doe"
-                    value={details.lastName}
-                    onChange={(e) => onDetailsChange("lastName", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
 
               <div className="address-section">
                 <p className="checkout-subtitle">Shipping Address</p>
@@ -162,7 +108,7 @@ const Checkout = ({
                           {addr.type === 'Home' && <Home size={14} />}
                           {addr.type === 'Office' && <Briefcase size={14} />}
                           {addr.type === 'Other' && <MapPin size={14} />}
-                          {addr.type}
+                          {addr.type === 'Other' && addr.other_type ? addr.other_type : addr.type}
                           {addr.is_default && <span className="address-default-tag">DEFAULT</span>}
                           {selectedAddressId === addr.id && <CheckCircle size={16} className="selected-icon" color="#1AA60B" fill="#E7F5E5" />}
                         </div>

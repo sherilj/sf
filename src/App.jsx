@@ -122,6 +122,41 @@ function App() {
     localStorage.setItem("svasthya_addresses", JSON.stringify(addresses));
   }, [addresses]);
 
+  // Fetch addresses from API
+  useEffect(() => {
+    if (!apiToken) return;
+    fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses", {
+      headers: { "Authorization": `Bearer ${apiToken}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch addresses");
+        return res.json();
+      })
+      .then(data => {
+        let arrayData = [];
+        if (Array.isArray(data)) arrayData = data;
+        else if (data && Array.isArray(data.addresses)) arrayData = data.addresses;
+        else if (data && Array.isArray(data.data)) arrayData = data.data;
+        
+        const formatted = arrayData.map(addr => ({
+          ...addr,
+          id: addr.id || addr._id,
+          type: addr.addressType || addr.type || "Home",
+          building_no: addr.buildingNo || addr.building_no || "",
+          building_name: addr.buildingName || addr.building_name || "",
+          street_no: addr.streetNo || addr.street_no || "",
+          area_name: addr.areaName || addr.area_name || "",
+          city: addr.city || "",
+          state: addr.state || "",
+          other_type: addr.otherType || addr.other_type || "",
+          pincode: addr.pinCode || addr.pincode || "",
+          is_default: addr.isDefault !== undefined ? addr.isDefault : addr.is_default
+        }));
+        setAddresses(formatted);
+      })
+      .catch(err => console.error("Error fetching addresses:", err));
+  }, [apiToken]);
+
   // Restore session from localStorage on mount (kept intentionally simple)
   useEffect(() => {
     // Simulate a small delay for smooth entry
@@ -151,7 +186,7 @@ function App() {
       });
       setShowProfileModal(false);
       setSaveSuccessMessage("Profile saved locally");
-      setCurrentPage("landing");
+      setCurrentPage("profile");
       setTimeout(() => setSaveSuccessMessage(""), 2500);
       return;
     }
@@ -183,7 +218,7 @@ function App() {
       setShowProfileModal(false);
 
       setSaveSuccessMessage("Profile changes saved");
-      setCurrentPage("landing");
+      setCurrentPage("profile");
       setTimeout(() => setSaveSuccessMessage(""), 2500);
     } catch (err) {
       setSaveSuccessMessage("");
@@ -243,39 +278,73 @@ function App() {
     setCurrentPage("landing");
 
     // Merge into profile storage if missing
-    const merged = { ...(profile || {}), name: mockUser.name || profile?.name, email: mockUser.email || profile?.email };
+    const merged = { ...(profile || {}), ...mockUser };
     setProfile(merged);
     try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
-    // Show modal for brand-new users (no saved profile). Existing users won't see the popup.
-    if (!hadSavedProfile) {
+    
+    // Show modal for new users. Existing users won't see the popup.
+    if (!isSignIn) {
       setShowProfileModal(true);
+    } else {
+      setShowProfileModal(false);
     }
   };
 
-  const handleOTPVerified = (phone, fullName, token) => {
+  const handleOTPVerified = async (phone, fullName, token, isSignInAction, responseData) => {
     if (token) {
       setApiTokenState(token);
       localStorage.setItem("svasthya_token", token);
     }
-    const mockUser = {
+    
+    let mockUser = {
       name: fullName || "Valued Member",
       phone: phone
     };
+
+    let userProfile = null;
+    if (isSignInAction && token) {
+      try {
+        const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/users/profile", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           userProfile = data.user || data.data || data;
+           if (userProfile) {
+             mockUser.name = userProfile.name || mockUser.name;
+             mockUser.email = userProfile.email || mockUser.email;
+             mockUser.phone = userProfile.mobileNumber || userProfile.phone || mockUser.phone;
+           }
+        }
+      } catch (err) {
+        console.error("Error fetching profile", err);
+      }
+    }
+
     localStorage.setItem("svasthya_user", JSON.stringify(mockUser));
     setUser(mockUser);
     setIsAuthenticated(true);
     setCurrentPage("landing");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // detect whether a saved profile already exists — if not, treat as new user
-    let hadSavedProfile = false;
-    try { hadSavedProfile = !!localStorage.getItem("svasthya_profile"); } catch (e) { hadSavedProfile = false; }
-
-    const merged = { ...(profile || {}), name: mockUser.name || profile?.name };
-    setProfile(merged);
-    try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
-    if (!hadSavedProfile) {
+    if (!isSignInAction) {
+      // New user signup - show population popup
+      const merged = { ...(profile || {}), name: mockUser.name };
+      setProfile(merged);
+      try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
       setShowProfileModal(true);
+    } else {
+      // Existing user sign in - fetch profile silently, go to home
+      if (userProfile) {
+        const merged = { ...(profile || {}), ...userProfile, name: mockUser.name };
+        setProfile(merged);
+        try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
+      } else {
+        const merged = { ...(profile || {}), name: mockUser.name };
+        setProfile(merged);
+        try { localStorage.setItem("svasthya_profile", JSON.stringify(merged)); } catch (e) {}
+      }
+      setShowProfileModal(false);
     }
   };
 
@@ -349,31 +418,173 @@ function App() {
     setCheckoutDetails(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddAddress = (address) => {
-    const newAddress = { ...address, id: Date.now() };
-    if (newAddress.is_default) {
-      setAddresses(prev => prev.map(a => ({ ...a, is_default: false })).concat(newAddress));
-    } else {
-      setAddresses(prev => [...prev, newAddress]);
-    }
-    if (addresses.length === 0) {
-      setSelectedAddressId(newAddress.id);
-    }
-  };
+  const handleAddAddress = async (address) => {
+    try {
+      let finalAddress = { ...address };
+      if (apiToken) {
+        setSaveSuccessMessage("Saving address...");
+        
+        const payload = {
+          // If user selected 'Other' and provided a custom name, send that as addressType
+          addressType: address.type === 'Other' && address.other_type ? address.other_type : address.type,
+          type: address.type,
+          buildingNo: address.building_no,
+          building_no: address.building_no,
+          buildingName: address.building_name,
+          building_name: address.building_name,
+          streetNo: address.street_no,
+          street_no: address.street_no,
+          areaName: address.area_name,
+          area_name: address.area_name,
+          city: address.city,
+          state: address.state,
+          otherType: address.other_type,
+          other_type: address.other_type,
+          pinCode: address.pincode ? Number(address.pincode) : null,
+          pincode: address.pincode ? Number(address.pincode) : null,
+          isDefault: address.is_default ? 1 : 0,
+          is_default: address.is_default ? 1 : 0
+        };
 
-  const handleUpdateAddress = (updatedAddress) => {
-    setAddresses(prev => prev.map(a => {
-      if (updatedAddress.is_default && a.id !== updatedAddress.id) {
-        return { ...a, is_default: false };
+        const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Failed to add address");
+        }
+        const data = await res.json();
+        const apiAddress = data.address || data.data || data;
+        finalAddress = {
+          ...apiAddress,
+          id: apiAddress.id || apiAddress._id,
+          type: apiAddress.addressType || apiAddress.type || address.type || "Home",
+          building_no: apiAddress.buildingNo || apiAddress.building_no || address.building_no || "",
+          building_name: apiAddress.buildingName || apiAddress.building_name || address.building_name || "",
+          street_no: apiAddress.streetNo || apiAddress.street_no || address.street_no || "",
+          area_name: apiAddress.areaName || apiAddress.area_name || address.area_name || "",
+          city: apiAddress.city || address.city || "",
+          state: apiAddress.state || address.state || "",
+          other_type: apiAddress.otherType || apiAddress.other_type || address.other_type || "",
+          pincode: apiAddress.pinCode || apiAddress.pincode || address.pincode || "",
+          is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
+        };
+        
+        setSaveSuccessMessage("Address saved successfully!");
+        setTimeout(() => setSaveSuccessMessage(""), 2000);
+      } else {
+        finalAddress.id = Date.now();
       }
-      return a.id === updatedAddress.id ? updatedAddress : a;
-    }));
+
+      setAddresses(prev => {
+        const newAddresses = finalAddress.is_default
+          ? prev.map(a => ({ ...a, is_default: false })).concat(finalAddress)
+          : [...prev, finalAddress];
+
+        return newAddresses;
+      });
+      setSelectedAddressId(finalAddress.id);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add address: " + err.message);
+    }
   };
 
-  const handleDeleteAddress = (id) => {
-    setAddresses(prev => prev.filter(a => a.id !== id));
-    if (selectedAddressId === id) {
-      setSelectedAddressId(null);
+  const handleUpdateAddress = async (updatedAddress) => {
+    try {
+      let finalAddress = { ...updatedAddress };
+      if (apiToken) {
+        setSaveSuccessMessage("Updating address...");
+        // Handle MongoDB _id if present in updatedAddress.id
+        const addressId = updatedAddress._id || updatedAddress.id;
+        
+        const payload = {
+          // If user selected 'Other' and provided a custom name, send that as addressType
+          addressType: updatedAddress.type === 'Other' && updatedAddress.other_type ? updatedAddress.other_type : updatedAddress.type,
+          type: updatedAddress.type,
+          buildingNo: updatedAddress.building_no,
+          building_no: updatedAddress.building_no,
+          buildingName: updatedAddress.building_name,
+          building_name: updatedAddress.building_name,
+          streetNo: updatedAddress.street_no,
+          street_no: updatedAddress.street_no,
+          areaName: updatedAddress.area_name,
+          area_name: updatedAddress.area_name,
+          city: updatedAddress.city,
+          state: updatedAddress.state,
+          otherType: updatedAddress.other_type,
+          other_type: updatedAddress.other_type,
+          pinCode: updatedAddress.pincode ? Number(updatedAddress.pincode) : null,
+          pincode: updatedAddress.pincode ? Number(updatedAddress.pincode) : null,
+          isDefault: updatedAddress.is_default ? 1 : 0,
+          is_default: updatedAddress.is_default ? 1 : 0
+        };
+
+        const res = await fetch(`https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses/${addressId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Failed to update address");
+        }
+        const data = await res.json();
+        const apiAddress = data.address || data.data || data;
+        finalAddress = {
+          ...apiAddress,
+          id: apiAddress.id || apiAddress._id,
+          type: apiAddress.addressType || apiAddress.type || updatedAddress.type || "Home",
+          building_no: apiAddress.buildingNo || apiAddress.building_no || updatedAddress.building_no || "",
+          building_name: apiAddress.buildingName || apiAddress.building_name || updatedAddress.building_name || "",
+          street_no: apiAddress.streetNo || apiAddress.street_no || updatedAddress.street_no || "",
+          area_name: apiAddress.areaName || apiAddress.area_name || updatedAddress.area_name || "",
+          city: apiAddress.city || updatedAddress.city || "",
+          state: apiAddress.state || updatedAddress.state || "",
+          other_type: apiAddress.otherType || apiAddress.other_type || updatedAddress.other_type || "",
+          pincode: apiAddress.pinCode || apiAddress.pincode || updatedAddress.pincode || "",
+          is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
+        };
+        setSaveSuccessMessage("Address updated successfully!");
+        setTimeout(() => setSaveSuccessMessage(""), 2000);
+      } else {
+        finalAddress.id = updatedAddress.id;
+      }
+
+      setAddresses(prev => prev.map(a => {
+        if (finalAddress.is_default && a.id !== finalAddress.id) {
+          return { ...a, is_default: false };
+        }
+        return a.id === finalAddress.id ? finalAddress : a;
+      }));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update address: " + err.message);
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    try {
+      if (apiToken) {
+        setSaveSuccessMessage("Deleting address...");
+        const res = await fetch(`https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses/${id}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${apiToken}` }
+        });
+        if (!res.ok) throw new Error("Failed to delete address");
+        setSaveSuccessMessage("Address deleted successfully!");
+        setTimeout(() => setSaveSuccessMessage(""), 2000);
+      }
+
+      setAddresses(prev => prev.filter(a => a.id !== id));
+      if (selectedAddressId === id) {
+        setSelectedAddressId(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete address: " + err.message);
     }
   };
 

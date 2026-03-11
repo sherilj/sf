@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Home, Briefcase, MapPin } from "lucide-react";
 
 const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
@@ -28,7 +29,7 @@ const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
         onSave(formData);
     };
 
-    return (
+    return createPortal(
         <div className="address-form-modal">
             <div className="address-form-container">
                 <div className="address-form-header">
@@ -52,6 +53,15 @@ const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
                             <MapPin size={18} /> Other
                         </label>
                     </div>
+
+                    {formData.type === 'Other' && (
+                        <div className="form-row">
+                            <div className="input-group">
+                                <label>Other Location Name</label>
+                                <input name="other_type" value={formData.other_type || ""} onChange={handleChange} placeholder="e.g. Gym, Parents' House" required />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="form-row">
                         <div className="input-group">
@@ -100,7 +110,8 @@ const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
                     </button>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

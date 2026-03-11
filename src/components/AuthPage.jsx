@@ -156,8 +156,15 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                 name: !isSignIn ? name.trim() : undefined
             });
             // Assume the API might set cookies or return a token, or we just proceed to app
-            const token = res.data?.token || res.data?.data?.token;
-            onOTPVerified && onOTPVerified(phoneKey, isSignIn ? undefined : name.trim(), token);
+            const token = res.data?.token || res.data?.data?.token || res.data?.user?.token;
+            // Also if response contains user name, grab it
+            let fetchedName = name.trim();
+            if (isSignIn && res.data?.user?.name) {
+                fetchedName = res.data.user.name;
+            } else if (isSignIn && res.data?.data?.name) {
+                fetchedName = res.data.data.name;
+            }
+            onOTPVerified && onOTPVerified(phoneKey, isSignIn ? fetchedName : name.trim(), token, isSignIn, res.data);
         } catch (err) {
             setError(err.response?.data?.message || err.message || "Invalid OTP. Please try again.");
         } finally {
