@@ -652,6 +652,36 @@
   box-shadow: 0 15px 30px rgba(124, 50, 37, 0.2);
 }
 
+.selected-icon {
+  margin-left: auto;
+  filter: drop-shadow(0 2px 4px rgba(26, 166, 11, 0.2));
+}
+
+.deliver-here-badge {
+  margin-top: 12px;
+  background: var(--checkout-brown);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px;
+  border-radius: 12px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 640px) {
   .address-grid {
     grid-template-columns: 1fr;

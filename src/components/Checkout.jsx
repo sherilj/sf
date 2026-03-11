@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldCheck, ArrowRight, Plus, MapPin, Home, Briefcase, Edit3, Trash2 } from "lucide-react";
+import { ShieldCheck, ArrowRight, Plus, MapPin, Home, Briefcase, Edit3, Trash2, CheckCircle } from "lucide-react";
 import ProgressStepper from "./ProgressStepper";
 import AddressForm from "./AddressForm";
 
@@ -164,6 +164,7 @@ const Checkout = ({
                           {addr.type === 'Other' && <MapPin size={14} />}
                           {addr.type}
                           {addr.is_default && <span className="address-default-tag">DEFAULT</span>}
+                          {selectedAddressId === addr.id && <CheckCircle size={16} className="selected-icon" color="#1AA60B" fill="#E7F5E5" />}
                         </div>
                         <div className="address-actions">
                           <button
@@ -187,6 +188,12 @@ const Checkout = ({
                         {addr.street_no}, {addr.area_name}<br />
                         {addr.city}, {addr.state} - {addr.pincode}
                       </div>
+
+                      {selectedAddressId === addr.id && (
+                        <div className="deliver-here-badge">
+                          DELIVER HERE
+                        </div>
+                      )}
                     </div>
                   ))}
                   <button
