@@ -8,6 +8,13 @@ import {
   ShoppingCart,
   User,
   Key,
+  Plus,
+  Trash2,
+  Edit3,
+  Edit,
+  MapPin,
+  Home,
+  Briefcase,
   ChevronDown,
   Mail,
   Lock,
@@ -49,13 +56,20 @@ function App() {
     email: "",
     firstName: "",
     lastName: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
     phone: "",
     altPhone: "",
   });
+  const [addresses, setAddresses] = useState(() => {
+    try {
+      const saved = localStorage.getItem("svasthya_addresses");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isAddingAddressStandalone, setIsAddingAddressStandalone] = useState(false);
+  const [editingAddressStandalone, setEditingAddressStandalone] = useState(null);
   const [deliveryMethod, setDeliveryMethod] = useState("standard");
   const [lastOrderId, setLastOrderId] = useState("#SV-431423");
 
@@ -102,6 +116,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem("svasthya_orders", JSON.stringify(orders));
   }, [orders]);
+
+  // Sync addresses to localStorage
+  useEffect(() => {
+    localStorage.setItem("svasthya_addresses", JSON.stringify(addresses));
+  }, [addresses]);
 
   // Restore session from localStorage on mount (kept intentionally simple)
   useEffect(() => {
@@ -181,13 +200,13 @@ function App() {
     const trimmed = token.trim();
     if (trimmed === "") {
       setApiTokenState(null);
-      try { localStorage.removeItem("svasthya_token"); } catch (e) {}
+      try { localStorage.removeItem("svasthya_token"); } catch (e) { }
       setSaveSuccessMessage("API token removed");
       setTimeout(() => setSaveSuccessMessage(""), 2000);
       return;
     }
     setApiTokenState(trimmed);
-    try { localStorage.setItem("svasthya_token", trimmed); } catch (e) {}
+    try { localStorage.setItem("svasthya_token", trimmed); } catch (e) { }
     setSaveSuccessMessage("API token saved");
     setTimeout(() => setSaveSuccessMessage(""), 2000);
   };
@@ -328,6 +347,34 @@ function App() {
 
   const handleDetailsChange = (field, value) => {
     setCheckoutDetails(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddAddress = (address) => {
+    const newAddress = { ...address, id: Date.now() };
+    if (newAddress.is_default) {
+      setAddresses(prev => prev.map(a => ({ ...a, is_default: false })).concat(newAddress));
+    } else {
+      setAddresses(prev => [...prev, newAddress]);
+    }
+    if (addresses.length === 0) {
+      setSelectedAddressId(newAddress.id);
+    }
+  };
+
+  const handleUpdateAddress = (updatedAddress) => {
+    setAddresses(prev => prev.map(a => {
+      if (updatedAddress.is_default && a.id !== updatedAddress.id) {
+        return { ...a, is_default: false };
+      }
+      return a.id === updatedAddress.id ? updatedAddress : a;
+    }));
+  };
+
+  const handleDeleteAddress = (id) => {
+    setAddresses(prev => prev.filter(a => a.id !== id));
+    if (selectedAddressId === id) {
+      setSelectedAddressId(null);
+    }
   };
 
   const goToCheckout = () => {
@@ -539,6 +586,9 @@ function App() {
                     <span className="user-email-label">{user?.email}</span>
                   </div>
                   <div className="mobile-nav-divider" style={{ margin: '8px 0' }} />
+                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("addresses"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    My Addresses
+                  </a>
                   <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     My Orders
                   </a>
@@ -617,6 +667,10 @@ function App() {
               {isAuthenticated && (
                 <>
                   <div className="mobile-nav-divider" />
+                  <a href="#" className={`mobile-nav-link ${currentPage === "addresses" ? "active" : ""}`}
+                    onClick={(e) => { e.preventDefault(); setCurrentPage("addresses"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    My Addresses
+                  </a>
                   <a href="#" className={`mobile-nav-link ${currentPage === "myOrders" ? "active" : ""}`}
                     onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     My Orders
@@ -633,7 +687,7 @@ function App() {
       )}
 
       <main
-        className={`main-content ${["landing", "ourStory", "contact", "auth"].includes(currentPage) ? "has-landing" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
+        className={`main-content ${["landing", "ourStory", "contact", "auth", "addresses"].includes(currentPage) ? "has-landing" : ""} ${["checkout", "delivery", "payment"].includes(currentPage) ? "checkout-mode" : ""} ${currentPage === "orderConfirmation" ? "order-conf-mode" : ""} ${["cartPage", "details", "orderConfirmation"].includes(currentPage) ? "cart-details-mode" : ""} ${currentPage === "products" ? "products-mode" : ""} ${currentPage === "contact" ? "contact-mode" : ""}`}
       >
         <div className="page-transition-wrapper">
 
@@ -731,6 +785,12 @@ function App() {
             <Checkout
               cart={cart}
               details={checkoutDetails}
+              addresses={addresses}
+              selectedAddressId={selectedAddressId}
+              onSelectAddress={setSelectedAddressId}
+              onAddAddress={handleAddAddress}
+              onUpdateAddress={handleUpdateAddress}
+              onDeleteAddress={handleDeleteAddress}
               onDetailsChange={handleDetailsChange}
               onBackToCart={() => {
                 setCurrentPage("cartPage");
@@ -743,6 +803,7 @@ function App() {
             <Delivery
               cart={cart}
               details={checkoutDetails}
+              address={addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0]}
               selectedMethod={deliveryMethod}
               onSelectMethod={setDeliveryMethod}
               onBack={() => {
@@ -756,6 +817,7 @@ function App() {
             <Payment
               cart={cart}
               details={checkoutDetails}
+              address={addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0]}
               selectedMethod={deliveryMethod}
               onBack={() => {
                 setCurrentPage("delivery");
@@ -812,6 +874,88 @@ function App() {
           )}
           {currentPage === "profile" && (
             <ProfileDetails profile={profile} onSave={saveProfile} />
+          )}
+          {currentPage === "addresses" && (
+            <div className="max-w-4xl mx-auto p-6 address-page-standalone">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#7C3225]">My Addresses</h2>
+                  <p className="text-gray-500">Manage your saved delivery locations</p>
+                </div>
+                <button
+                  className="flex items-center gap-2 px-6 py-3 bg-[#7C3225] text-white rounded-full font-semibold shadow-lg hover:bg-[#5a241b] transition-all"
+                  onClick={() => {
+                    setSelectedAddressId(null);
+                    // We need a local state for the form visibility here too, or handle it in App.jsx
+                    // For simplicity, I'll use a hacky way since App.jsx is already huge.
+                    // Actually, I'll just add a simple modal state to App.jsx for global address management
+                    setIsAddingAddressStandalone(true);
+                  }}
+                >
+                  <Plus size={20} /> Add New Address
+                </button>
+              </div>
+
+              <div className="address-grid">
+                {addresses.map((addr) => (
+                  <div key={addr.id} className="address-card-item standalone">
+                    <div className="address-card-header">
+                      <div className="address-type-badge">
+                        {addr.type === 'Home' && <Home size={16} />}
+                        {addr.type === 'Office' && <Briefcase size={16} />}
+                        {addr.type === 'Other' && <MapPin size={16} />}
+                        {addr.type}
+                        {addr.is_default && <span className="address-default-tag">DEFAULT</span>}
+                      </div>
+                      <div className="address-actions">
+                        <button className="address-action-btn" onClick={() => { setEditingAddressStandalone(addr); setIsAddingAddressStandalone(true); }}>
+                          <Edit3 size={16} />
+                        </button>
+                        <button className="address-action-btn" onClick={() => handleDeleteAddress(addr.id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="address-content py-4">
+                      <p className="font-semibold text-gray-800">{addr.building_no}, {addr.building_name}</p>
+                      <p className="text-gray-600">{addr.street_no}, {addr.area_name}</p>
+                      <p className="text-gray-600">{addr.city}, {addr.state} - {addr.pincode}</p>
+                    </div>
+                    {!addr.is_default && (
+                      <button
+                        className="mt-2 text-sm font-semibold text-[#1AA60B] hover:underline"
+                        onClick={() => handleUpdateAddress({ ...addr, is_default: true })}
+                      >
+                        Set as Default
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {addresses.length === 0 && (
+                  <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                    <MapPin size={48} className="mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-400">No addresses saved yet</h3>
+                    <p className="text-gray-400">Add an address to speed up your checkout process</p>
+                  </div>
+                )}
+              </div>
+
+              {isAddingAddressStandalone && (
+                <AddressForm
+                  initialAddress={editingAddressStandalone || {}}
+                  onSave={(addr) => {
+                    if (editingAddressStandalone) handleUpdateAddress(addr);
+                    else handleAddAddress(addr);
+                    setIsAddingAddressStandalone(false);
+                    setEditingAddressStandalone(null);
+                  }}
+                  onCancel={() => {
+                    setIsAddingAddressStandalone(false);
+                    setEditingAddressStandalone(null);
+                  }}
+                />
+              )}
+            </div>
           )}
         </div>
       </main>

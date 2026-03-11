@@ -32,6 +32,7 @@ const Payment = ({
     cart = [],
     details,
     selectedMethod = "standard",
+    address,
     onBack = () => { },
     onPlaceOrder = () => { },
 }) => {
@@ -45,9 +46,9 @@ const Payment = ({
     const shippingCost = selectedMethod === "express" ? 150 : 0;
     const total = subtotal + shippingCost;
     const contactSummary = details?.email || "you@example.com";
-    const shippingAddress = details
-        ? `${details.address}, ${details.city}, ${details.state} ${details.pincode}`
-        : "#13, 11th Cross, Prakruti Township";
+    const shippingAddress = address
+        ? `${address.building_no}, ${address.building_name}, ${address.street_no}, ${address.area_name}, ${address.city}, ${address.state} - ${address.pincode}`
+        : (details?.address ? `${details.address}, ${details.city}, ${details.state} ${details.pincode}` : "#13, 11th Cross, Prakruti Township");
 
     const getMethodLabel = (id) => DELIVERY_OPTIONS_MAP[id] || "Standard Delivery";
 

@@ -43,6 +43,7 @@ const formatCurrency = (value) => `₹${value.toLocaleString("en-IN")}`;
 const Delivery = ({
   cart = [],
   details,
+  address,
   selectedMethod = "standard",
   onSelectMethod = () => { },
   onBack = () => { },
@@ -56,9 +57,9 @@ const Delivery = ({
   const shippingCost = selectedMethod === "express" ? 150 : 0;
   const total = subtotal + shippingCost;
   const contactSummary = details?.email || "you@example.com";
-  const shippingSummary = details
-    ? `${details.address}, ${details.city}, ${details.state} ${details.pincode}`
-    : "#13, 11th Cross, Prakruti Township";
+  const shippingSummary = address
+    ? `${address.building_no}, ${address.building_name}, ${address.street_no}, ${address.area_name}, ${address.city}, ${address.state} - ${address.pincode}`
+    : (details?.address ? `${details.address}, ${details.city}, ${details.state} ${details.pincode}` : "#13, 11th Cross, Prakruti Township");
 
   return (
     <section className="bg-[#FEF8F0] min-h-[calc(100vh-120px)] px-4 py-10 font-['Poppins',sans-serif]">

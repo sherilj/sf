@@ -1,6 +1,7 @@
-import React from "react";
-import { ShieldCheck, ArrowRight } from "lucide-react";
+import React, { useState } from "react";
+import { ShieldCheck, ArrowRight, Plus, MapPin, Home, Briefcase, Edit3, Trash2 } from "lucide-react";
 import ProgressStepper from "./ProgressStepper";
+import AddressForm from "./AddressForm";
 
 const FALLBACK_ITEMS = [
   {
@@ -23,25 +24,22 @@ const FALLBACK_ITEMS = [
 
 const formatCurrency = (value) => `₹${value.toLocaleString("en-IN")}`;
 
-const defaultDetails = {
-  email: "",
-  firstName: "",
-  lastName: "",
-  address: "",
-  city: "",
-  state: "",
-  pincode: "",
-  phone: "",
-  altPhone: "",
-};
-
 const Checkout = ({
   cart = [],
   onBackToCart = () => { },
   onContinue = () => { },
-  details = defaultDetails,
+  details = {},
+  addresses = [],
+  selectedAddressId = null,
+  onSelectAddress = () => { },
+  onAddAddress = () => { },
+  onUpdateAddress = () => { },
+  onDeleteAddress = () => { },
   onDetailsChange = () => { },
 }) => {
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+
   const items = cart.length ? cart : FALLBACK_ITEMS;
   const subtotal = items.reduce(
     (sum, item) => sum + item.price * (item.quantity || 1),
@@ -52,7 +50,34 @@ const Checkout = ({
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (!selectedAddressId) {
+      alert("Please select or add a shipping address.");
+      return;
+    }
     onContinue();
+  };
+
+  const handleEditClick = (e, address) => {
+    e.stopPropagation();
+    setEditingAddress(address);
+    setShowAddressForm(true);
+  };
+
+  const handleDeleteClick = (e, id) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this address?")) {
+      onDeleteAddress(id);
+    }
+  };
+
+  const handleSaveAddress = (address) => {
+    if (editingAddress) {
+      onUpdateAddress(address);
+    } else {
+      onAddAddress(address);
+    }
+    setShowAddressForm(false);
+    setEditingAddress(null);
   };
 
   return (
@@ -73,115 +98,108 @@ const Checkout = ({
             </div>
 
             <form className="checkout-form" onSubmit={handleSubmit}>
-              <div className="checkout-input-group">
-                <label htmlFor="email">Email Address</label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={details.email}
-                  onChange={(e) => onDetailsChange("email", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <p className="checkout-subtitle">Shipping Address</p>
-                <div className="form-row">
-                  <div className="checkout-input-group">
-                    <label htmlFor="firstName">First Name</label>
-                    <input
-                      id="firstName"
-                      type="text"
-                      placeholder="John"
-                      value={details.firstName}
-                      onChange={(e) => onDetailsChange("firstName", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="checkout-input-group">
-                    <label htmlFor="lastName">Last Name</label>
-                    <input
-                      id="lastName"
-                      type="text"
-                      placeholder="Doe"
-                      value={details.lastName}
-                      onChange={(e) => onDetailsChange("lastName", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
+              <div className="form-row">
                 <div className="checkout-input-group">
-                  <label htmlFor="address">Address</label>
+                  <label htmlFor="email">Email Address</label>
                   <input
-                    id="address"
-                    type="text"
-                    placeholder="123 Green Street, Apt 4B"
-                    value={details.address}
-                    onChange={(e) => onDetailsChange("address", e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={details.email}
+                    onChange={(e) => onDetailsChange("email", e.target.value)}
                     required
                   />
                 </div>
-
-                <div className="form-row">
-                  <div className="checkout-input-group">
-                    <label htmlFor="city">City</label>
-                    <input
-                      id="city"
-                      type="text"
-                      placeholder="Mumbai"
-                      value={details.city}
-                      onChange={(e) => onDetailsChange("city", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="checkout-input-group">
-                    <label htmlFor="state">State</label>
-                    <input
-                      id="state"
-                      type="text"
-                      placeholder="Maharashtra"
-                      value={details.state}
-                      onChange={(e) => onDetailsChange("state", e.target.value)}
-                      required
-                    />
-                  </div>
+                <div className="checkout-input-group">
+                  <label htmlFor="phone">Phone</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={details.phone}
+                    onChange={(e) => onDetailsChange("phone", e.target.value)}
+                    required
+                  />
                 </div>
+              </div>
 
-                <div className="form-row thirds">
-                  <div className="checkout-input-group">
-                    <label htmlFor="pincode">Pincode</label>
-                    <input
-                      id="pincode"
-                      type="text"
-                      placeholder="400001"
-                      value={details.pincode}
-                      onChange={(e) => onDetailsChange("pincode", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="checkout-input-group">
-                    <label htmlFor="phone">Phone</label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      placeholder="+91 98765 43210"
-                      value={details.phone}
-                      onChange={(e) => onDetailsChange("phone", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="checkout-input-group">
-                    <label htmlFor="altPhone">Alternate Phone</label>
-                    <input
-                      id="altPhone"
-                      type="tel"
-                      placeholder="Optional"
-                      value={details.altPhone}
-                      onChange={(e) => onDetailsChange("altPhone", e.target.value)}
-                    />
-                  </div>
+              <div className="form-row">
+                <div className="checkout-input-group">
+                  <label htmlFor="firstName">First Name</label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={details.firstName}
+                    onChange={(e) => onDetailsChange("firstName", e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="checkout-input-group">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={details.lastName}
+                    onChange={(e) => onDetailsChange("lastName", e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="address-section">
+                <p className="checkout-subtitle">Shipping Address</p>
+                <div className="address-grid">
+                  {addresses.map((addr) => (
+                    <div
+                      key={addr.id}
+                      className={`address-card-item ${selectedAddressId === addr.id ? 'selected' : ''}`}
+                      onClick={() => onSelectAddress(addr.id)}
+                    >
+                      <div className="address-card-header">
+                        <div className="address-type-badge">
+                          {addr.type === 'Home' && <Home size={14} />}
+                          {addr.type === 'Office' && <Briefcase size={14} />}
+                          {addr.type === 'Other' && <MapPin size={14} />}
+                          {addr.type}
+                          {addr.is_default && <span className="address-default-tag">DEFAULT</span>}
+                        </div>
+                        <div className="address-actions">
+                          <button
+                            type="button"
+                            className="address-action-btn"
+                            onClick={(e) => handleEditClick(e, addr)}
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="address-action-btn"
+                            onClick={(e) => handleDeleteClick(e, addr.id)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="address-content">
+                        {addr.building_no}, {addr.building_name}<br />
+                        {addr.street_no}, {addr.area_name}<br />
+                        {addr.city}, {addr.state} - {addr.pincode}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="add-address-btn-card"
+                    onClick={() => {
+                      setEditingAddress(null);
+                      setShowAddressForm(true);
+                    }}
+                  >
+                    <Plus size={24} />
+                    <span>Add New Address</span>
+                  </button>
                 </div>
               </div>
 
@@ -253,8 +271,15 @@ const Checkout = ({
             </div>
           </aside>
         </div>
-
       </div>
+
+      {showAddressForm && (
+        <AddressForm
+          initialAddress={editingAddress || {}}
+          onSave={handleSaveAddress}
+          onCancel={() => setShowAddressForm(false)}
+        />
+      )}
     </section>
   );
 };
