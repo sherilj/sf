@@ -3,7 +3,7 @@ import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import axios from "axios";
 
 const OTP_ATTEMPTS_KEY = "otp_attempts"; // will store object { [phone]: [timestamps] }
-const API_BASE_URL = "https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev";
+const API_BASE_URL = "http://65.1.85.74:8082";
 
 const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword, onOTPVerified }) => {
     const [stage, setStage] = useState("phone"); // 'phone' or 'otp'

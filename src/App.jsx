@@ -125,7 +125,7 @@ function App() {
   // Fetch addresses from API
   useEffect(() => {
     if (!apiToken) return;
-    fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses", {
+    fetch("http://65.1.85.74:8082/api/v1/addresses", {
       headers: { "Authorization": `Bearer ${apiToken}` }
     })
       .then(res => {
@@ -192,7 +192,7 @@ function App() {
     }
 
     try {
-      const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/users/profile", {
+      const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(newProfile),
@@ -304,7 +304,7 @@ function App() {
     let userProfile = null;
     if (isSignInAction && token) {
       try {
-        const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/users/profile", {
+        const res = await fetch("http://65.1.85.74:8082/api/v1/users/profile", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -446,7 +446,7 @@ function App() {
           is_default: address.is_default ? 1 : 0
         };
 
-        const res = await fetch("https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses", {
+        const res = await fetch("http://65.1.85.74:8082/api/v1/addresses", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
           body: JSON.stringify(payload)
@@ -522,7 +522,7 @@ function App() {
           is_default: updatedAddress.is_default ? 1 : 0
         };
 
-        const res = await fetch(`https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses/${addressId}`, {
+        const res = await fetch(`http://65.1.85.74:8082/api/v1/addresses/${addressId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiToken}` },
           body: JSON.stringify(payload)
@@ -569,7 +569,7 @@ function App() {
     try {
       if (apiToken) {
         setSaveSuccessMessage("Deleting address...");
-        const res = await fetch(`https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev/api/v1/addresses/${id}`, {
+        const res = await fetch(`http://65.1.85.74:8082/api/v1/addresses/${id}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${apiToken}` }
         });
