@@ -96,6 +96,36 @@ function normaliseProfile(data, fallback = {}) {
   };
 }
 
+function normaliseAddresses(data) {
+  let arrayData = [];
+  if (Array.isArray(data)) arrayData = data;
+  else if (data && Array.isArray(data.addresses)) arrayData = data.addresses;
+  else if (data && Array.isArray(data.data)) arrayData = data.data;
+
+  return arrayData.map((addr) => {
+    const rawType = addr.addressType || addr.type || "home";
+    const normalised = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
+    const isStandard = ["Home", "Office", "Other"].includes(normalised);
+
+    return {
+      ...addr,
+      id: addr.id || addr._id,
+      type: isStandard ? normalised : "Other",
+      building_no: addr.buildingNo || addr.building_no || "",
+      building_name: addr.buildingName || addr.building_name || "",
+      street_no: addr.streetNo || addr.street_no || "",
+      area_name: addr.areaName || addr.area_name || "",
+      city: addr.city || "",
+      state: addr.state || "",
+      other_type: isStandard ? (addr.otherType || addr.other_type || "") : rawType,
+      pincode: addr.pinCode || addr.pincode || "",
+      is_default: addr.isDefault !== undefined
+        ? (addr.isDefault === 1 || addr.isDefault === true)
+        : (addr.is_default === 1 || addr.is_default === true)
+    };
+  });
+}
+
 function mapApiCartToLocal(apiCart) {
   const items = apiCart?.items;
   if (!Array.isArray(items)) return [];
@@ -193,6 +223,23 @@ function App() {
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
 
+  const syncAddressesFromBackend = async (token) => {
+    try {
+      const res = await getAddresses(token);
+      if (!res.ok) throw new Error("Failed to fetch addresses");
+      const data = await res.json();
+      const formatted = normaliseAddresses(data);
+      setAddresses(formatted);
+
+      const defaultAddress = formatted.find((addr) => addr.is_default) || formatted[0] || null;
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+      }
+    } catch (err) {
+      console.error("Error fetching addresses:", err);
+    }
+  };
+
   // Sync orders to localStorage
   useEffect(() => {
     localStorage.setItem("svasthya_orders", JSON.stringify(orders));
@@ -275,40 +322,7 @@ function App() {
     fetchLatestProfile();
     fetchUserInfo();
 
-    // Fetch Addresses
-    getAddresses(apiToken)
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch addresses");
-        return res.json();
-      })
-      .then(data => {
-        let arrayData = [];
-        if (Array.isArray(data)) arrayData = data;
-        else if (data && Array.isArray(data.addresses)) arrayData = data.addresses;
-        else if (data && Array.isArray(data.data)) arrayData = data.data;
-
-        const formatted = arrayData.map(addr => {
-          const rawType = addr.addressType || addr.type || "home";
-          const normalised = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
-          const isStandard = ["Home", "Office", "Other"].includes(normalised);
-          return {
-            ...addr,
-            id: addr.id || addr._id,
-            type: isStandard ? normalised : "Other",
-            building_no: addr.buildingNo || addr.building_no || "",
-            building_name: addr.buildingName || addr.building_name || "",
-            street_no: addr.streetNo || addr.street_no || "",
-            area_name: addr.areaName || addr.area_name || "",
-            city: addr.city || "",
-            state: addr.state || "",
-            other_type: isStandard ? (addr.otherType || addr.other_type || "") : rawType,
-            pincode: addr.pinCode || addr.pincode || "",
-            is_default: addr.isDefault !== undefined ? (addr.isDefault === 1 || addr.isDefault === true) : (addr.is_default === 1 || addr.is_default === true)
-          };
-        });
-        setAddresses(formatted);
-      })
-      .catch(err => console.error("Error fetching addresses:", err));
+    syncAddressesFromBackend(apiToken);
   }, [apiToken]);
 
   // Sync cart from API on token change
@@ -621,6 +635,8 @@ function App() {
         } catch (err) {
           console.error("[Auth] User info fetch failed:", err);
         }
+
+        await syncAddressesFromBackend(authToken);
       }
       setShowProfileModal(false);
     }
@@ -1136,9 +1152,6 @@ function App() {
                     <span className="user-email-label">{user?.email}</span>
                   </div>
                   <div className="mobile-nav-divider" style={{ margin: '8px 0' }} />
-                  <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("addresses"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                    My Addresses
-                  </a>
                   <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     My Orders
                   </a>
@@ -1217,10 +1230,6 @@ function App() {
               {isAuthenticated && (
                 <>
                   <div className="mobile-nav-divider" />
-                  <a href="#" className={`mobile-nav-link ${currentPage === "addresses" ? "active" : ""}`}
-                    onClick={(e) => { e.preventDefault(); setCurrentPage("addresses"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                    My Addresses
-                  </a>
                   <a href="#" className={`mobile-nav-link ${currentPage === "myOrders" ? "active" : ""}`}
                     onClick={(e) => { e.preventDefault(); setCurrentPage("myOrders"); closeMobileMenu(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     My Orders

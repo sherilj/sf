@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { sendOtp, verifyOtp } from "../api";
 
-const OTP_ATTEMPTS_KEY = "otp_attempts"; // will store object { [phone]: [timestamps] }
+const OTP_RESEND_ATTEMPTS_KEY = "otp_resend_attempts"; // stores resend clicks by phone for the last hour
 
 const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword, setShowPassword, onOTPVerified }) => {
     const [stage, setStage] = useState("phone"); // 'phone' or 'otp'
@@ -43,31 +43,38 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
         }, 1000);
     };
 
-    const loadAttempts = () => {
+    const loadResendAttempts = () => {
         try {
-            const raw = localStorage.getItem(OTP_ATTEMPTS_KEY);
+            const raw = localStorage.getItem(OTP_RESEND_ATTEMPTS_KEY);
             return raw ? JSON.parse(raw) : {};
         } catch (e) { return {}; }
     };
 
-    const saveAttempts = (data) => {
-        localStorage.setItem(OTP_ATTEMPTS_KEY, JSON.stringify(data));
+    const saveResendAttempts = (data) => {
+        localStorage.setItem(OTP_RESEND_ATTEMPTS_KEY, JSON.stringify(data));
     };
 
     const pruneAttempts = (arr) => arr.filter(ts => (Date.now() - ts) < 3600 * 1000);
 
-    const canAttempt = (phoneNumber) => {
-        const data = loadAttempts();
+    const canResendOtp = (phoneNumber) => {
+        const data = loadResendAttempts();
         const arr = pruneAttempts(data[phoneNumber] || []);
         return arr.length < 3;
     };
 
-    const recordAttempt = (phoneNumber) => {
-        const data = loadAttempts();
+    const recordResendAttempt = (phoneNumber) => {
+        const data = loadResendAttempts();
         const arr = pruneAttempts(data[phoneNumber] || []);
         arr.push(Date.now());
         data[phoneNumber] = arr;
-        saveAttempts(data);
+        saveResendAttempts(data);
+    };
+
+    const clearResendAttempts = (phoneNumber) => {
+        const data = loadResendAttempts();
+        if (!data[phoneNumber]) return;
+        delete data[phoneNumber];
+        saveResendAttempts(data);
     };
 
     const handleSendOtp = async (e) => {
@@ -85,19 +92,13 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
             }
         }
         const phoneKey = `+91${normalized}`;
-        if (!canAttempt(phoneKey)) {
-            setAttemptsExceeded(true);
-            setError("Maximum attempts reached. Please try again in 1 hour.");
-            return;
-        }
-
         setIsLoading(true);
         try {
             await sendOtp({
                 mobileNumber: phoneKey,
                 name: !isSignIn ? name.trim() : undefined
             });
-            recordAttempt(phoneKey);
+            setAttemptsExceeded(false);
             setStage("otp");
             setOtp("");
             startTimer();
@@ -113,7 +114,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
         if (resendDisabled || isLoading) return;
         const normalized = phone.replace(/\D/g, "");
         const phoneKey = `+91${normalized}`;
-        if (!canAttempt(phoneKey)) {
+        if (!canResendOtp(phoneKey)) {
             setAttemptsExceeded(true);
             setError("Maximum attempts reached. Please try again in 1 hour.");
             return;
@@ -124,7 +125,8 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
             await sendOtp({
                 mobileNumber: phoneKey
             });
-            recordAttempt(phoneKey);
+            recordResendAttempt(phoneKey);
+            setAttemptsExceeded(false);
             setError("");
             startTimer();
         } catch (err) {
@@ -180,6 +182,8 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                     fetchedName ||
                     "";
             }
+            clearResendAttempts(phoneKey);
+            setAttemptsExceeded(false);
             onOTPVerified && onOTPVerified(phoneKey, isSignIn ? fetchedName : name.trim(), token, isSignIn, res.data);
         } catch (err) {
             setError(err.response?.data?.message || err.message || "Invalid OTP. Please try again.");

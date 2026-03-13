@@ -18,9 +18,19 @@ const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        let nextValue = value;
+
+        if (name === "pincode") {
+            nextValue = value.replace(/\D/g, "").slice(0, 6);
+        }
+
+        if (name === "city" || name === "state") {
+            nextValue = value.replace(/[^a-zA-Z\s]/g, "");
+        }
+
         setFormData(prev => ({
             ...prev,
-            [name]: type === "checkbox" ? checked : value
+            [name]: type === "checkbox" ? checked : nextValue
         }));
     };
 
@@ -88,15 +98,15 @@ const AddressForm = ({ initialAddress = {}, onSave, onCancel }) => {
                     <div className="form-row thirds">
                         <div className="input-group">
                             <label>City</label>
-                            <input name="city" value={formData.city} onChange={handleChange} placeholder="Mumbai" required />
+                            <input name="city" value={formData.city} onChange={handleChange} placeholder="Mumbai" inputMode="text" pattern="[A-Za-z\s]+" required />
                         </div>
                         <div className="input-group">
                             <label>State</label>
-                            <input name="state" value={formData.state} onChange={handleChange} placeholder="Maharashtra" required />
+                            <input name="state" value={formData.state} onChange={handleChange} placeholder="Maharashtra" inputMode="text" pattern="[A-Za-z\s]+" required />
                         </div>
                         <div className="input-group">
                             <label>Pincode</label>
-                            <input name="pincode" value={formData.pincode} onChange={handleChange} placeholder="400001" required />
+                            <input name="pincode" value={formData.pincode} onChange={handleChange} placeholder="400001" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required />
                         </div>
                     </div>
 
