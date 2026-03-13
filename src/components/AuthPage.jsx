@@ -157,7 +157,8 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
                 name: !isSignIn ? name.trim() : undefined
             });
             // Extract JWT token from any possible response shape
-            const resData = res.data || {};
+                        const resData = res.data || {};
+                        const tokenFromHeader = res.headers?.get("authorization") || res.headers?.get("Authorization") || "";
             const token = resData.token
               || resData.data?.token
               || resData.user?.token
@@ -166,6 +167,7 @@ const AuthPage = ({ isSignIn, setIsSignIn, handleAuth, isLoggingIn, showPassword
               || resData.data?.accessToken
               || resData.jwt
               || resData.data?.jwt
+                            || tokenFromHeader
               || null;
             console.log("[Auth] verify-otp full response:", JSON.stringify(resData, null, 2));
             console.log("[Auth] Extracted token:", token ? token.substring(0, 20) + "..." : "NO TOKEN FOUND");

@@ -1,4 +1,9 @@
-export const API_BASE_URL = "http://65.1.85.74:8082";
+import { API_ENDPOINTS, BASE_URL } from "./apiConfig";
+
+export const API_BASE_URL = BASE_URL;
+
+const normalizeToken = (token) => (token || "").replace(/^(Bearer|Token|JWT)\s+/i, "").trim();
+const authHeader = (token) => ({ "Authorization": `Bearer ${normalizeToken(token)}` });
 
 const fetchJson = async (url, options = {}) => {
 	const res = await fetch(url, options);
@@ -17,96 +22,96 @@ const fetchJson = async (url, options = {}) => {
 		throw error;
 	}
 
-	return { data, status: res.status };
+	return { data, status: res.status, headers: res.headers };
 };
 
 // Fetches profile details for the logged-in user.
-export const getUserProfile = (token) => fetch(`${API_BASE_URL}/api/v1/users/profile`, {
-	headers: { "Authorization": `Bearer ${token}` },
+export const getUserProfile = (token) => fetch(API_ENDPOINTS.GET_USER_PROFILE, {
+	headers: authHeader(token),
 });
 
 // Fetches user account details (like user_id) for the logged-in user.
-export const getUserInfo = (token) => fetch(`${API_BASE_URL}/api/v1/users`, {
-	headers: { "Authorization": `Bearer ${token}` },
+export const getUserInfo = (token) => fetch(API_ENDPOINTS.GET_USER_INFO, {
+	headers: authHeader(token),
 });
 
 // Fetches all saved addresses for the logged-in user.
-export const getAddresses = (token) => fetch(`${API_BASE_URL}/api/v1/addresses`, {
-	headers: { "Authorization": `Bearer ${token}` },
+export const getAddresses = (token) => fetch(API_ENDPOINTS.GET_ADDRESSES, {
+	headers: authHeader(token),
 });
 
 // Updates profile details for the logged-in user.
-export const updateUserProfile = (token, payload) => fetch(`${API_BASE_URL}/api/v1/users/profile`, {
+export const updateUserProfile = (token, payload) => fetch(API_ENDPOINTS.GET_USER_PROFILE, {
 	method: "PUT",
-	headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+	headers: { "Content-Type": "application/json", ...authHeader(token) },
 	body: JSON.stringify(payload),
 });
 
 // Creates a new address for the logged-in user.
-export const createAddress = (token, payload) => fetch(`${API_BASE_URL}/api/v1/addresses`, {
+export const createAddress = (token, payload) => fetch(API_ENDPOINTS.CREATE_ADDRESS, {
 	method: "POST",
-	headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+	headers: { "Content-Type": "application/json", ...authHeader(token) },
 	body: JSON.stringify(payload),
 });
 
 // Updates an existing address for the logged-in user.
-export const editAddress = (token, addressId, payload) => fetch(`${API_BASE_URL}/api/v1/addresses/${addressId}`, {
+export const editAddress = (token, addressId, payload) => fetch(API_ENDPOINTS.UPDATE_ADDRESS(addressId), {
 	method: "PUT",
-	headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+	headers: { "Content-Type": "application/json", ...authHeader(token) },
 	body: JSON.stringify(payload),
 });
 
 // Deletes an address for the logged-in user.
-export const removeAddress = (token, addressId) => fetch(`${API_BASE_URL}/api/v1/addresses/${addressId}`, {
+export const removeAddress = (token, addressId) => fetch(API_ENDPOINTS.DELETE_ADDRESS(addressId), {
 	method: "DELETE",
-	headers: { "Authorization": `Bearer ${token}` },
+	headers: authHeader(token),
 });
 
 // Fetches the current cart for the logged-in user.
-export const getCart = (token) => fetch(`${API_BASE_URL}/api/v1/cart`, {
-	headers: { "Authorization": `Bearer ${token}` },
+export const getCart = (token) => fetch(API_ENDPOINTS.GET_CART, {
+	headers: authHeader(token),
 });
 
 // Adds an item to cart using variant id and quantity.
-export const addCartItem = (token, payload) => fetch(`${API_BASE_URL}/api/v1/cart/add`, {
+export const addCartItem = (token, payload) => fetch(API_ENDPOINTS.ADD_CART_ITEM, {
 	method: "POST",
-	headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+	headers: { "Content-Type": "application/json", ...authHeader(token) },
 	body: JSON.stringify(payload),
 });
 
 // Increases cart item quantity for a specific variant.
-export const incrementCartItem = (token, variantId) => fetch(`${API_BASE_URL}/api/v1/cart/increment/${variantId}`, {
+export const incrementCartItem = (token, variantId) => fetch(API_ENDPOINTS.INCREMENT_CART_ITEM(variantId), {
 	method: "POST",
-	headers: { "Authorization": `Bearer ${token}` },
+	headers: authHeader(token),
 });
 
 // Decreases cart item quantity for a specific variant.
-export const decrementCartItem = (token, variantId) => fetch(`${API_BASE_URL}/api/v1/cart/decrement/${variantId}`, {
+export const decrementCartItem = (token, variantId) => fetch(API_ENDPOINTS.DECREMENT_CART_ITEM(variantId), {
 	method: "POST",
-	headers: { "Authorization": `Bearer ${token}` },
+	headers: authHeader(token),
 });
 
 // Removes a specific item from the cart using variant id.
-export const removeCartItem = (token, variantId) => fetch(`${API_BASE_URL}/api/v1/cart/${variantId}`, {
+export const removeCartItem = (token, variantId) => fetch(API_ENDPOINTS.REMOVE_CART_ITEM(variantId), {
 	method: "DELETE",
-	headers: { "Authorization": `Bearer ${token}` },
+	headers: authHeader(token),
 });
 
 // Clears all items from the cart.
-export const clearCart = (token) => fetch(`${API_BASE_URL}/api/v1/cart/clear`, {
+export const clearCart = (token) => fetch(API_ENDPOINTS.CLEAR_CART, {
 	method: "DELETE",
-	headers: { "Authorization": `Bearer ${token}` },
+	headers: authHeader(token),
 });
 
 // Sends OTP to a mobile number during auth.
-export const sendOtp = (payload) => fetchJson(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+export const sendOtp = (payload) => fetchJson(API_ENDPOINTS.SEND_OTP, {
 	method: "POST",
 	headers: { "Content-Type": "application/json" },
 	body: JSON.stringify(payload),
 });
 
 // Verifies OTP and returns auth/user response.
-export const verifyOtp = (payload) => fetchJson(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+export const verifyOtp = (payload) => fetchJson(API_ENDPOINTS.VERIFY_OTP, {
 	method: "POST",
 	headers: { "Content-Type": "application/json" },
 	body: JSON.stringify(payload),

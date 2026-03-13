@@ -143,6 +143,10 @@ function mapApiCartToLocal(apiCart) {
   }));
 }
 
+function normalizeAuthToken(token) {
+  return (token || "").replace(/^(Bearer|Token|JWT)\s+/i, "").trim();
+}
+
 function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignIn, setIsSignIn] = useState(true);
@@ -475,18 +479,26 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear all user-specific data from localStorage
     localStorage.removeItem("svasthya_user");
     localStorage.removeItem("svasthya_token");
     localStorage.removeItem("svasthya_profile");
+    localStorage.removeItem("svasthya_addresses");
+    localStorage.removeItem("svasthya_orders");
+    localStorage.removeItem("svasthya_current_page");
+    // Reset all in-memory user state
     setIsAuthenticated(false);
     setUser(null);
     setApiTokenState(null);
     setProfile({});
     setAddresses([]);
+    setOrders([]);
+    setWishlist([]);
+    setSelectedAddressId(null);
+    setCart([]);
     if (apiToken) {
       clearCart(apiToken).catch(() => { });
     }
-    setCart([]);
     setCurrentPage("auth");
   };
 
@@ -537,13 +549,22 @@ function App() {
     if (!authToken && responseData) {
       authToken = responseData.token
         || responseData.data?.token
+        || responseData.authToken
+        || responseData.jwtToken
         || responseData.user?.token
         || responseData.data?.user?.token
         || responseData.accessToken
         || responseData.data?.accessToken
+        || responseData.access_token
+        || responseData.data?.access_token
+        || responseData.jwt
+        || responseData.data?.jwt
+        || responseData.data?.jwtToken
         || null;
       if (authToken) console.log("[handleOTPVerified] Token found via fallback extraction");
     }
+
+    authToken = normalizeAuthToken(authToken);
 
     if (authToken) {
       setApiTokenState(authToken);
