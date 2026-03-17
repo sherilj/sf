@@ -1,13 +1,153 @@
-import React from "react";
-import { ShoppingBag, Plus, Minus, X, ArrowRight, Truck, ShieldCheck } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ShoppingBag, Plus, Minus, X, ArrowRight, Truck, ShieldCheck, Tag, Check } from "lucide-react";
+import { getCoupons, verifyCoupon } from "../api";
 
 const FREE_SHIPPING_THRESHOLD = 999;
 
-const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProceedToCheckout = () => { } }) => {
+const toNumber = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizeCoupon = (coupon) => {
+  const code = String(
+    coupon?.code || coupon?.couponCode || coupon?.coupon_code || coupon?.name || ""
+  ).trim();
+  if (!code) return null;
+
+  const typeRaw = String(coupon?.discountType || coupon?.type || "fixed").toLowerCase();
+  const type = typeRaw.includes("percent") ? "percentage" : "fixed";
+
+  return {
+    code,
+    description: coupon?.description || coupon?.title || "Discount coupon",
+    type,
+    discount: toNumber(coupon?.discount ?? coupon?.discountValue ?? coupon?.discountAmount ?? coupon?.value),
+    minOrderAmount: toNumber(coupon?.minOrderAmount ?? coupon?.minimumOrderAmount ?? coupon?.minimumPurchase ?? coupon?.minCartValue),
+  };
+};
+
+const extractCoupons = (responseData) => {
+  const raw = Array.isArray(responseData)
+    ? responseData
+    : (Array.isArray(responseData?.data) ? responseData.data : (Array.isArray(responseData?.coupons) ? responseData.coupons : []));
+
+  return raw.map(normalizeCoupon).filter(Boolean);
+};
+
+const getDiscountFromCoupon = (coupon, subtotal) => {
+  if (!coupon) return 0;
+
+  const directDiscount = toNumber(coupon.discountAmount);
+  if (directDiscount > 0) return Math.min(directDiscount, subtotal);
+
+  if (coupon.type === "percentage") {
+    return Math.min((subtotal * toNumber(coupon.discount)) / 100, subtotal);
+  }
+  return Math.min(toNumber(coupon.discount), subtotal);
+};
+
+const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShopping, onProceedToCheckout = () => { } }) => {
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
   const subtotal = cart.reduce((t, i) => t + i.price * i.quantity, 0);
   const shippingFree = subtotal >= FREE_SHIPPING_THRESHOLD;
   const progress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCoupons = async () => {
+      setIsLoadingCoupons(true);
+      try {
+        const res = await getCoupons(apiToken);
+        if (!cancelled) {
+          setAvailableCoupons(extractCoupons(res?.data));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAvailableCoupons([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCoupons(false);
+        }
+      }
+    };
+
+    loadCoupons();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiToken]);
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+    const normalizedCode = couponCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    try {
+      const verifyRes = await verifyCoupon(apiToken, {
+        code: normalizedCode,
+        couponCode: normalizedCode,
+        subtotal,
+        cartTotal: subtotal,
+        orderAmount: subtotal,
+      });
+
+      const payload = verifyRes?.data || {};
+      const details = payload?.data || payload;
+      const valid = details?.valid ?? details?.isValid ?? payload?.valid ?? payload?.isValid ?? payload?.success ?? true;
+
+      if (!valid) {
+        setCouponError(details?.message || payload?.message || "Coupon is not valid for this order");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      const sourceCoupon = normalizeCoupon(details?.coupon || details) || normalizeCoupon({ code: normalizedCode, type: "fixed", discount: 0 });
+      const verifiedCoupon = {
+        ...sourceCoupon,
+        code: sourceCoupon.code || normalizedCode,
+        discountAmount: toNumber(details?.discountAmount ?? details?.discount_amount),
+      };
+
+      setAppliedCoupon(verifiedCoupon);
+      setCouponError("");
+    } catch (error) {
+      setAppliedCoupon(null);
+      setCouponError(error?.response?.data?.message || error?.message || "Failed to verify coupon");
+      return;
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+
+    setCouponCode("");
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
+  const getDiscount = () => {
+    return getDiscountFromCoupon(appliedCoupon, subtotal);
+  };
+
+  const discount = getDiscount();
+  const finalSubtotal = subtotal - discount;
+  const shipping = shippingFree ? 0 : 99;
 
   if (cart.length === 0) {
     return (
@@ -98,16 +238,84 @@ const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProc
                 </div>
               ))}
             </div>
+
+            <button className="cp-add-more-btn" onClick={onContinueShopping}>
+              + Add more items
+            </button>
           </div>
 
           {/* Right column - order summary */}
           <div className="cp-right">
+            {/* Apply Coupons */}
+            <div className="cp-coupons-section">
+              <h3 className="cp-coupons-title"><Tag size={18} /> Apply Coupons</h3>
+
+              <div className="cp-coupon-input-group">
+                <input
+                  type="text"
+                  placeholder="Enter Coupon Code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
+                  className="cp-coupon-input"
+                />
+                <button
+                  className="cp-coupon-apply-btn"
+                  onClick={handleApplyCoupon}
+                  disabled={isApplyingCoupon}
+                >
+                  {isApplyingCoupon ? "APPLYING..." : "APPLY"}
+                </button>
+              </div>
+              {couponError && <p className="cp-coupon-error">{couponError}</p>}
+              {appliedCoupon && (
+                <div className="cp-coupon-applied-msg">
+                  <p>✓ {appliedCoupon.code} applied successfully!</p>
+                  <button
+                    className="cp-coupon-remove"
+                    onClick={handleRemoveCoupon}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              <h4 className="cp-coupon-subtitle">Available Coupons</h4>
+              <div className="cp-coupons-list">
+                {isLoadingCoupons && <p className="cp-coupon-helper">Loading coupons...</p>}
+                {!isLoadingCoupons && availableCoupons.length === 0 && <p className="cp-coupon-helper">No coupons available right now</p>}
+                {!isLoadingCoupons && availableCoupons.map((coupon) => (
+                  <div 
+                    key={coupon.code} 
+                    className={`cp-coupon-card ${appliedCoupon?.code === coupon.code ? "cp-coupon-applied" : ""}`}
+                    onClick={() => {
+                      setCouponCode(coupon.code);
+                      setCouponError("");
+                    }}
+                  >
+                    <div className="cp-coupon-content">
+                      <p className="cp-coupon-code">{coupon.code}</p>
+                      <p className="cp-coupon-desc">{coupon.description}</p>
+                    </div>
+                    {appliedCoupon?.code === coupon.code && <Check size={20} className="cp-coupon-check" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
             <div className="cp-summary-card">
               <h2 className="cp-summary-title">Order Summary</h2>
               <div className="cp-summary-row">
                 <span>Subtotal</span>
                 <span>₹{subtotal}</span>
               </div>
+              {appliedCoupon && (
+                <div className="cp-summary-row cp-discount-row">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span className="cp-discount-amount">-₹{discount.toFixed(0)}</span>
+                </div>
+              )}
               <div className="cp-summary-row">
                 <span>Shipping Estimate</span>
                 <span className={shippingFree ? "cp-free" : ""}>
@@ -121,7 +329,7 @@ const CartPage = ({ cart, onUpdateQuantity, onRemove, onContinueShopping, onProc
               <div className="cp-summary-divider" />
               <div className="cp-summary-total">
                 <span>Order Total</span>
-                <span>₹{shippingFree ? subtotal : subtotal + 99}</span>
+                <span>₹{(finalSubtotal + shipping).toFixed(0)}</span>
               </div>
               <button className="cp-checkout-btn" onClick={onProceedToCheckout}>
                 PROCEED TO CHECKOUT <ArrowRight size={16} />

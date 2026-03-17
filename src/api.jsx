@@ -68,37 +68,52 @@ export const removeAddress = (token, addressId) => fetch(API_ENDPOINTS.DELETE_AD
 });
 
 // Fetches the current cart for the logged-in user.
-export const getCart = (token) => fetch(API_ENDPOINTS.GET_CART, {
+export const getCart = (token) => fetchJson(API_ENDPOINTS.GET_CART, {
 	headers: authHeader(token),
 });
 
 // Adds an item to cart using variant id and quantity.
-export const addCartItem = (token, payload) => fetch(API_ENDPOINTS.ADD_CART_ITEM, {
-	method: "POST",
-	headers: { "Content-Type": "application/json", ...authHeader(token) },
-	body: JSON.stringify(payload),
-});
+export const addCartItem = (token, payload) => {
+	const normalizedPayload = {
+		// Try camelCase first (what backend likely expects)
+		variantId: payload.variantId || payload.variant_id,
+		quantity: payload.quantity || 1,
+		// Also include snake_case as fallback
+		variant_id: payload.variantId || payload.variant_id,
+	};
+	
+	console.log("🔧 Normalized cart payload to send:", normalizedPayload);
+	
+	return fetchJson(API_ENDPOINTS.ADD_CART_ITEM, {
+		method: "POST",
+		headers: { 
+			"Content-Type": "application/json",
+			...authHeader(token) 
+		},
+		body: JSON.stringify(normalizedPayload),
+	});
+};
 
 // Increases cart item quantity for a specific variant.
-export const incrementCartItem = (token, variantId) => fetch(API_ENDPOINTS.INCREMENT_CART_ITEM(variantId), {
+export const incrementCartItem = (token, variantId) => fetchJson(API_ENDPOINTS.INCREMENT_CART_ITEM(variantId), {
 	method: "POST",
 	headers: authHeader(token),
 });
 
 // Decreases cart item quantity for a specific variant.
-export const decrementCartItem = (token, variantId) => fetch(API_ENDPOINTS.DECREMENT_CART_ITEM(variantId), {
+export const decrementCartItem = (token, variantId) => fetchJson(API_ENDPOINTS.DECREMENT_CART_ITEM(variantId), {
 	method: "POST",
 	headers: authHeader(token),
 });
 
 // Removes a specific item from the cart using variant id.
-export const removeCartItem = (token, variantId) => fetch(API_ENDPOINTS.REMOVE_CART_ITEM(variantId), {
+export const removeCartItem = (token, variantId) => fetchJson(API_ENDPOINTS.REMOVE_CART_ITEM(variantId), {
 	method: "DELETE",
 	headers: authHeader(token),
 });
 
 // Clears all items from the cart.
-export const clearCart = (token) => fetch(API_ENDPOINTS.CLEAR_CART, {
+export const clearCart = (token) => fetchJson(API_ENDPOINTS.CLEAR_CART, {
 	method: "DELETE",
 	headers: authHeader(token),
 });
@@ -115,6 +130,35 @@ export const verifyOtp = (payload) => fetchJson(API_ENDPOINTS.VERIFY_OTP, {
 	method: "POST",
 	headers: { "Content-Type": "application/json" },
 	body: JSON.stringify(payload),
+});
+
+// Creates an order using checkout flow.
+export const createCheckout = (token, payload) => fetchJson(API_ENDPOINTS.CREATE_CHECKOUT, {
+	method: "POST",
+	headers: { "Content-Type": "application/json", ...(token ? authHeader(token) : {}) },
+	body: JSON.stringify(payload),
+});
+
+// Fetches available coupons.
+export const getCoupons = (token) => fetchJson(API_ENDPOINTS.GET_COUPONS, {
+	headers: token ? authHeader(token) : undefined,
+});
+
+// Verifies coupon code and returns coupon applicability/discount details.
+export const verifyCoupon = (token, payload) => fetchJson(API_ENDPOINTS.VERIFY_COUPON, {
+	method: "POST",
+	headers: { "Content-Type": "application/json", ...(token ? authHeader(token) : {}) },
+	body: JSON.stringify(payload),
+});
+
+// Fetches all orders for the logged-in user.
+export const getOrders = (token) => fetchJson(API_ENDPOINTS.GET_ORDERS, {
+	headers: authHeader(token),
+});
+
+// Fetches a single order by id for the logged-in user.
+export const getOrderDetails = (token, id) => fetchJson(API_ENDPOINTS.GET_ORDER_DETAILS(id), {
+	headers: authHeader(token),
 });
 
 // Fetches all categories.

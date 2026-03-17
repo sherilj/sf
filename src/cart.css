@@ -390,6 +390,25 @@
   outline-offset: -2px;
 }
 
+.cp-add-more-btn {
+  margin-top: 14px;
+  background: #FEF8F0;
+  color: #7C3225;
+  border: 1px dashed #D4AF37;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cp-add-more-btn:hover {
+  background: #E7F5E5;
+  border-color: #1AA60B;
+  color: #1AA60B;
+}
+
 .cp-item {
   display: flex;
   align-items: center;
@@ -607,6 +626,223 @@
   font-weight: 600;
   color: #868889;
   letter-spacing: 0.04em;
+}
+
+/* Coupon Section */
+.cp-coupons-section {
+  background: white;
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+  margin-bottom: 20px;
+}
+
+.cp-coupons-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #7C3225;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-coupon-subtitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #7C3225;
+  margin: 14px 0 10px;
+}
+
+.cp-coupons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 130px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.cp-coupons-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cp-coupons-list::-webkit-scrollbar-track {
+  background: #FEF8F0;
+  border-radius: 10px;
+}
+
+.cp-coupons-list::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.cp-coupons-list::-webkit-scrollbar-thumb:hover {
+  background: #B8860B;
+}
+
+.cp-coupon-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 2px solid #EBEBEB;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #FEF8F0;
+  transition: all 0.3s ease;
+}
+
+.cp-coupon-card:hover {
+  border-color: #1AA60B;
+  background: #E7F5E5;
+}
+
+.cp-coupon-card.cp-coupon-applied {
+  border-color: #1AA60B;
+  background: #E7F5E5;
+}
+
+.cp-coupon-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cp-coupon-code {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7C3225;
+  margin: 0;
+  letter-spacing: 0.06em;
+}
+
+.cp-coupon-desc {
+  font-size: 0.75rem;
+  color: #868889;
+  margin: 0;
+}
+
+.cp-coupon-check {
+  color: #1AA60B;
+  flex-shrink: 0;
+}
+
+.cp-coupon-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cp-coupon-input {
+  flex: 1;
+  border: 1px solid #EBEBEB;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #7C3225;
+  background: white;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.cp-coupon-input:focus {
+  outline: none;
+  border-color: #7C3225;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(124, 50, 37, 0.1);
+}
+
+.cp-coupon-input::placeholder {
+  color: #868889;
+}
+
+.cp-coupon-apply-btn {
+  background: #7C3225;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.cp-coupon-apply-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cp-coupon-apply-btn:hover {
+  background: #8B3F2D;
+  transform: translateY(-1px);
+}
+
+.cp-coupon-apply-btn:active {
+  transform: translateY(0);
+}
+
+.cp-coupon-error {
+  color: #D32F2F;
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 8px 0;
+  font-weight: 500;
+}
+
+.cp-coupon-helper {
+  font-size: 0.82rem;
+  color: #868889;
+  margin: 2px 0;
+}
+
+.cp-coupon-applied-msg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #E7F5E5;
+  border-left: 3px solid #1AA60B;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.cp-coupon-applied-msg p {
+  color: #1AA60B;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.cp-coupon-remove {
+  background: none;
+  border: none;
+  color: #1AA60B;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.cp-coupon-remove:hover {
+  color: #0D7A05;
+}
+
+.cp-discount-row {
+  color: #1AA60B;
+}
+
+.cp-discount-amount {
+  color: #1AA60B;
+  font-weight: 700;
 }
 
 @media (max-width: 860px) {

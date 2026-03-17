@@ -46,11 +46,14 @@ import OrderTracking from "./components/OrderTracking";
 import {
   addCartItem,
   clearCart,
+  createCheckout,
   createAddress,
   decrementCartItem,
   editAddress,
   getCart,
   getAddresses,
+  getOrderDetails,
+  getOrders,
   getUserInfo,
   getUserProfile,
   incrementCartItem,
@@ -129,20 +132,131 @@ function normaliseAddresses(data) {
 }
 
 function mapApiCartToLocal(apiCart) {
-  const items = apiCart?.items;
-  if (!Array.isArray(items)) return [];
+  console.log("🔍 mapApiCartToLocal received:", JSON.stringify(apiCart, null, 2));
+  
+  if (!apiCart) {
+    console.log("❌ apiCart is null/undefined");
+    return [];
+  }
 
-  return items.map((item) => ({
-    id: item.productId || item.product_id || item.variantId,
-    variantId: item.variantId || item.variant_id,
-    cartItemId: String(item.variantId || item.variant_id || item.productId || item.product_id || Date.now()),
-    name: item.productName || item.name || "Product",
-    category: item.category || "",
-    img: item.imageUrl || item.image || "",
-    selectedVariant: item.variantName || item.variant || "Standard",
-    price: item.unitPrice || item.price || 0,
-    quantity: item.quantity || 1,
-  }));
+  // Try multiple possible item field names
+  let items = apiCart?.items || 
+             apiCart?.cartItems || 
+             apiCart?.cart_items ||
+             apiCart?.data?.items ||
+             apiCart?.data?.cartItems ||
+             apiCart?.data?.cart_items;
+  
+  console.log("🔍 Looking for items array...");
+  
+  // If still no items, check if apiCart itself is an array
+  if (!items && Array.isArray(apiCart)) {
+    console.log("✅ apiCart is an array itself");
+    items = apiCart;
+  }
+  
+  // If still no items, check all properties to find arrays
+  if (!items) {
+    console.log("⚠️  Standard item fields not found. Searching all properties...");
+    for (const [key, value] of Object.entries(apiCart)) {
+      if (Array.isArray(value)) {
+        console.log(`📍 Found array at key: "${key}", length: ${value.length}`);
+        items = value;
+        break;
+      }
+    }
+  }
+  
+  if (!Array.isArray(items)) {
+    console.error("❌ No items array found in cart data!");
+    console.error("❌ apiCart structure:", apiCart);
+    return [];
+  }
+
+  console.log(`✅ Found ${items.length} items to map`);
+  
+  return items.map((item) => {
+    const id = item.productId || item.product_id || item.id || item.variantId || item.variant_id;
+    const variantId = item.variantId || item.variant_id || id;
+    const cartItemId = String(id || variantId || Date.now());
+    
+    const mapped = {
+      id,
+      variantId,
+      cartItemId,
+      name: item.productName || item.name || "Product",
+      category: item.category || item.categoryName || "",
+      img: item.imageUrl || item.image || item.img || "",
+      selectedVariant: item.variantName || item.variant || item.variant_name || "Standard",
+      price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+      quantity: parseInt(item.quantity || item.qty || 1),
+    };
+    
+    console.log("📦 Mapped item:", mapped.name, "qty:", mapped.quantity, "price:", mapped.price);
+    return mapped;
+  });
+}
+
+function formatOrderDate(value) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function mapApiOrderItemToLocal(item) {
+  const productObj = item?.product || item?.productDetails || {};
+  const image = item?.imageUrl || item?.image || item?.img || productObj?.imageUrl || productObj?.image || "/wild_honey.png";
+
+  return {
+    id: item?.id || item?.productId || item?.product_id || item?.variantId || item?.variant_id,
+    name: item?.productName || item?.name || productObj?.name || "Product",
+    img: image,
+    variant: item?.variantName || item?.variant || item?.size || "",
+    quantity: Number(item?.quantity || item?.qty || 1),
+    price: Number(item?.unitPrice || item?.price || item?.amount || 0),
+  };
+}
+
+function mapApiOrderToLocal(order, fallback = {}) {
+  const rawItems = Array.isArray(order?.items)
+    ? order.items
+    : (Array.isArray(order?.orderItems) ? order.orderItems : []);
+
+  const totalRaw = order?.totalAmount ?? order?.grandTotal ?? order?.total ?? order?.amount ?? fallback.total ?? 0;
+  const total = Number(totalRaw);
+
+  return {
+    ...fallback,
+    ...order,
+    id: String(order?.id || order?.orderId || order?._id || fallback.id || ""),
+    date: formatOrderDate(order?.createdAt || order?.orderDate || order?.date || fallback.date),
+    items: rawItems.length ? rawItems.map(mapApiOrderItemToLocal) : (fallback.items || []),
+    total: Number.isFinite(total) ? total : Number(fallback.total || 0),
+    status: order?.status || order?.orderStatus || fallback.status || "Processing",
+    paymentMethod: order?.paymentMethod || order?.paymentType || fallback.paymentMethod || "Not Specified",
+    customerName: order?.customerName || order?.shippingAddress?.name || fallback.customerName || "Valued Member",
+    address: order?.deliveryAddress || order?.shippingAddress?.addressLine || order?.shippingAddress?.fullAddress || fallback.address,
+    phone: order?.phone || order?.shippingAddress?.phone || fallback.phone,
+    email: order?.email || fallback.email,
+  };
+}
+
+function extractOrdersFromResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.orders)) return data.orders;
+  if (Array.isArray(data?.data?.orders)) return data.data.orders;
+  return [];
+}
+
+function extractOrderFromResponse(data) {
+  if (!data) return null;
+  if (data?.order && typeof data.order === 'object') return data.order;
+  if (data?.data?.order && typeof data.data.order === 'object') return data.data.order;
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) return data.data;
+  if (typeof data === 'object' && !Array.isArray(data)) return data;
+  return null;
 }
 
 function normalizeAuthToken(token) {
@@ -393,23 +507,94 @@ function App() {
   // Sync cart from API on token change
   useEffect(() => {
     const fetchCartData = async () => {
-      if (!apiToken) return;
+      if (!apiToken) {
+        console.log("⏭️  No API token, skipping cart sync");
+        return;
+      }
       try {
+        console.log("🔄 Syncing cart from API...");
         const res = await getCart(apiToken);
-        if (!res.ok) return;
-        const json = await res.json();
-        const cartData = json.cart || json.data || json;
+        console.log("📦 Cart API full response:", res);
+        console.log("📦 res.data:", JSON.stringify(res.data, null, 2));
+        
+        // Try to extract cart data from various possible response structures
+        let cartData = res.data?.cart || res.data?.data || res.data;
+        console.log("📋 Extracted cartData:", JSON.stringify(cartData, null, 2));
+        
+        // If the response itself is an object with items, use it directly
+        if (Array.isArray(cartData?.items)) {
+          console.log("✅ Found items in response.items");
+        } else if (Array.isArray(cartData?.cartItems)) {
+          console.log("✅ Found items in response.cartItems");
+        } else if (Array.isArray(cartData?.cart_items)) {
+          console.log("✅ Found items in response.cart_items");
+        } else {
+          console.log("⚠️  No items found in expected fields. Checking all properties...");
+          console.log("📋 cartData keys:", cartData ? Object.keys(cartData) : "cartData is null/undefined");
+          console.log("📋 cartData full structure:", cartData);
+        }
+        
         const mapped = mapApiCartToLocal(cartData);
-        if (mapped.length > 0 || Array.isArray(cartData?.items)) {
+        console.log(`📊 Mapped ${mapped.length} items from cart`);
+        
+        if (mapped.length > 0) {
+          console.log("✅ Setting cart with", mapped.length, "items");
           setCart(mapped);
+        } else {
+          console.log("⚠️  API returned 0 items, cart will appear empty");
         }
       } catch (err) {
-        console.error("Fetch cart error:", err);
+        console.error("❌ Fetch cart error:", err.message || err);
+        console.error("❌ Full error:", err);
       }
     };
 
     fetchCartData();
   }, [apiToken]);
+
+  // Sync orders from API on token change
+  useEffect(() => {
+    const fetchOrdersData = async () => {
+      if (!apiToken) return;
+      try {
+        const res = await getOrders(apiToken);
+        const list = extractOrdersFromResponse(res?.data || {});
+        const mapped = list.map((order) => mapApiOrderToLocal(order));
+        setOrders(mapped);
+      } catch (err) {
+        console.error("Fetch orders error:", err);
+      }
+    };
+
+    fetchOrdersData();
+  }, [apiToken]);
+
+  const handleTrackOrder = async (order) => {
+    if (!order) return;
+
+    if (!apiToken) {
+      setSelectedOrderForTracking(order);
+      setCurrentPage("orderTracking");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    try {
+      const orderId = String(order.id || "").replace(/^#/, "");
+      if (!orderId) throw new Error("Missing order id");
+
+      const res = await getOrderDetails(apiToken, orderId);
+      const rawOrder = extractOrderFromResponse(res?.data || {});
+      const mappedOrder = rawOrder ? mapApiOrderToLocal(rawOrder, order) : order;
+      setSelectedOrderForTracking(mappedOrder);
+    } catch (err) {
+      console.error("Fetch order details error:", err);
+      setSelectedOrderForTracking(order);
+    }
+
+    setCurrentPage("orderTracking");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Restore session from localStorage on mount (kept intentionally simple)
   useEffect(() => {
@@ -741,8 +926,18 @@ function App() {
   const addToCart = async (product, selectedVariant = null) => {
     // Use the provided selectedVariant or the product's selectedVariant
     const variant = selectedVariant || product.selectedVariant;
-    const variantLabel = variant?.variantName || 'Standard';
-    const variantId = variant?.id || product?.variantId || product?.id;
+    const variantLabel = variant?.variantName || variant?.name || 'Standard';
+    const variantId = variant?.id || variant?.variantId || variant?.variant_id || product?.variantId || product?.variant_id || product?.selectedVariant?.id || product?.selectedVariant?.variantId || product?.id;
+    const productId = product?.id || product?.productId;
+
+    console.log("Adding to cart:", { 
+      productName: product.name,
+      productId,
+      variantId, 
+      variantLabel,
+      price: selectedVariant?.price || product.price,
+      quantity: 1
+    });
 
     // Local optimistic behavior (kept as fallback)
     const applyLocalAdd = () => {
@@ -750,12 +945,14 @@ function App() {
         const cartItemId = `${product.id}-${variantLabel}`;
         const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
         if (existingItem) {
+          console.log("Item exists, incrementing quantity");
           return prevCart.map(item =>
             item.cartItemId === cartItemId
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
         }
+        console.log("Adding new item to local cart");
         return [...prevCart, {
           ...product,
           variantId,
@@ -767,21 +964,56 @@ function App() {
       });
     };
 
-    if (!apiToken || !variantId) {
+    // If no auth token or variantId, use local cart only
+    if (!apiToken) {
+      console.log("No API token, using local cart only");
+      applyLocalAdd();
+      return;
+    }
+
+    if (!variantId || !productId) {
+      console.warn("Missing variantId or productId, using local cart only", { variantId, productId });
       applyLocalAdd();
       return;
     }
 
     try {
-      const res = await addCartItem(apiToken, { variantId, quantity: 1 });
-      if (!res.ok) throw new Error("Add to cart failed");
+      // Send minimal, clean payload
+      const payload = {
+        variantId: String(variantId),
+        quantity: 1,
+      };
+      
+      console.log("📤 CART ADD Request payload:", JSON.stringify(payload));
+      const res = await addCartItem(apiToken, payload);
+      console.log("✅ CART ADD Response status:", res?.status);
+      console.log("✅ CART ADD Response data:", JSON.stringify(res?.data));
+      
+      // Fetch fresh cart from backend to verify items were saved
+      console.log("🔄 Fetching fresh cart to verify items were saved...");
       const cartRes = await getCart(apiToken);
-      if (!cartRes.ok) throw new Error("Failed to fetch cart");
-      const json = await cartRes.json();
-      const cartData = json.cart || json.data || json;
-      setCart(mapApiCartToLocal(cartData));
+      const cartData = cartRes.data?.cart || cartRes.data?.data || cartRes.data;
+      console.log("📦 Fresh cart from backend - Full response:", JSON.stringify(cartData, null, 2));
+      
+      if (cartData && Array.isArray(cartData?.items) && cartData.items.length > 0) {
+        const mapped = mapApiCartToLocal(cartData);
+        console.log(`✅ Items saved! Synced ${mapped.length} items from database`);
+        setCart(mapped);
+      } else if (cartData && Array.isArray(cartData?.cartItems) && cartData.cartItems.length > 0) {
+        const mapped = mapApiCartToLocal(cartData);
+        console.log(`✅ Items saved! Synced ${mapped.length} items from database`);
+        setCart(mapped);
+      } else {
+        console.error("⚠️  Backend cart is still empty - add to cart failed!");
+        console.log("Using local cart as fallback (items won't persist)");
+        applyLocalAdd();
+      }
     } catch (err) {
-      console.error("Add cart item error:", err);
+      console.error("❌ Add to cart failed:", err.message);
+      if (err?.response?.data) {
+        console.error("❌ Backend error response:", JSON.stringify(err.response.data));
+      }
+      // Still add to local cart as fallback
       applyLocalAdd();
     }
   };
@@ -808,10 +1040,9 @@ function App() {
 
     try {
       const isIncrement = newQuantity > (item?.quantity || 0);
-      const res = isIncrement
+      isIncrement
         ? await incrementCartItem(apiToken, variantId)
         : await decrementCartItem(apiToken, variantId);
-      if (!res.ok) throw new Error("Update quantity failed");
     } catch (err) {
       console.error("Update cart quantity error:", err);
       // rollback optimistic update
@@ -835,8 +1066,7 @@ function App() {
     if (!apiToken || !variantId) return;
 
     try {
-      const res = await removeCartItem(apiToken, variantId);
-      if (!res.ok) throw new Error("Remove item failed");
+      await removeCartItem(apiToken, variantId);
     } catch (err) {
       console.error("Remove cart item error:", err);
       setCart(previous);
@@ -1028,6 +1258,11 @@ function App() {
   };
 
   const goToCheckout = () => {
+    if (!cart || cart.length === 0) {
+      setSaveSuccessMessage("Your cart is empty. Add items to proceed to checkout.");
+      setTimeout(() => setSaveSuccessMessage(""), 3000);
+      return;
+    }
     setCurrentPage("checkout");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1041,6 +1276,139 @@ function App() {
     setDeliveryMethod(method);
     setCurrentPage("payment");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePlaceOrder = async (method) => {
+    // Validate cart has items
+    if (!cart || cart.length === 0) {
+      alert("Your cart is empty. Please add items before placing an order.");
+      return;
+    }
+
+    const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0];
+    
+    if (!selectedAddress) {
+      alert("Please select or add a delivery address.");
+      return;
+    }
+
+    let methodLabel = "Card Payment";
+    if (method === "cod" || method === "Cash on Delivery") methodLabel = "Cash on Delivery";
+    else if (method === "upi" || method === "UPI / Netbanking") methodLabel = "UPI / Netbanking";
+
+    // Verify backend has the cart items - retry if needed
+    console.log("🔍 Verifying items are saved in backend...");
+    let backendItemsCount = 0;
+    let verifyAttempts = 0;
+    const maxAttempts = 3;
+
+    while (verifyAttempts < maxAttempts && backendItemsCount === 0) {
+      try {
+        const verifyRes = await getCart(apiToken);
+        const backendCart = verifyRes.data?.cart || verifyRes.data?.data || verifyRes.data;
+        const backendItems = backendCart?.items || backendCart?.cartItems || backendCart?.cart_items || [];
+        backendItemsCount = Array.isArray(backendItems) ? backendItems.length : 0;
+        
+        console.log(`📦 Verification attempt ${verifyAttempts + 1}: Backend has ${backendItemsCount} items`);
+        
+        if (backendItemsCount === 0 && verifyAttempts < maxAttempts - 1) {
+          console.log("⏳ Items not found yet, retrying in 500ms...");
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } catch (err) {
+        console.error("Verification failed:", err.message);
+      }
+      verifyAttempts++;
+    }
+
+    if (backendItemsCount === 0) {
+      console.error("❌ CRITICAL: Backend cart is empty!");
+      alert("Your items are not saved in the database. Please add items again and wait for confirmation.");
+      return;
+    }
+
+    const shippingCharge = deliveryMethod === "express" ? 150 : 0;
+    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const total = subtotal + shippingCharge;
+
+    const items = cart.map((item, idx) => {
+      const varId = item.variantId || item.id;
+      return {
+        variantId: String(varId),
+        quantity: parseInt(item.quantity || 1),
+        unitPrice: parseFloat(item.price || 0),
+      };
+    });
+
+    const payload = {
+      paymentMethod: method,
+      deliveryMethod: deliveryMethod || "standard",
+      addressId: selectedAddress?.id,
+      shippingAddress: {
+        id: selectedAddress?.id,
+        type: selectedAddress?.type || selectedAddress?.address_type,
+        buildingNo: selectedAddress?.building_no,
+        buildingName: selectedAddress?.building_name,
+        street: selectedAddress?.street_no,
+        area: selectedAddress?.area_name,
+        city: selectedAddress?.city,
+        state: selectedAddress?.state,
+        pincode: selectedAddress?.pincode,
+      },
+      customer: {
+        name: user?.name || checkoutDetails.firstName || "Valued Member",
+        email: checkoutDetails.email || user?.email || "",
+        phone: checkoutDetails.phone || user?.phone || "",
+      },
+      items,
+      subtotal,
+      shippingCharge,
+      total,
+    };
+
+    console.log("=== 🛒 FINAL CHECKOUT ===");
+    console.log("Backend has", backendItemsCount, "items");
+    console.log("Sending payload:", JSON.stringify(payload, null, 2));
+    console.log("=======================");
+
+    try {
+      setSaveSuccessMessage("Placing order...");
+      const res = await createCheckout(apiToken, payload);
+      console.log("✅ Checkout success:", res?.data);
+      
+      const raw = res?.data?.data?.order || res?.data?.order || res?.data?.data || res?.data;
+
+      const fallbackOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
+      const mappedOrder = raw ? mapApiOrderToLocal(raw) : {
+        id: fallbackOrderId,
+        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+        items: [...cart],
+        total,
+        status: 'Processing',
+        deliveryMethod,
+        paymentMethod: methodLabel,
+        customerName: user?.name,
+      };
+
+      const normalizedOrderId = mappedOrder?.id ? String(mappedOrder.id) : fallbackOrderId;
+      setOrders(prev => [mappedOrder, ...prev]);
+      setLastOrderId(normalizedOrderId.startsWith("#") ? normalizedOrderId : `#${normalizedOrderId}`);
+
+      if (apiToken) {
+        clearCart(apiToken).catch(() => { });
+      }
+      setCart([]);
+      setCurrentPage("orderConfirmation");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setSaveSuccessMessage("Order placed successfully");
+      setTimeout(() => setSaveSuccessMessage(""), 2000);
+    } catch (err) {
+      console.error("❌ Checkout error:", err.message);
+      console.error("❌ Backend response:", err?.response?.data);
+      setSaveSuccessMessage("");
+      const errorMsg = err?.response?.data?.message || err?.message || "Failed to place order. Please try again.";
+      alert(errorMsg);
+    }
   };
 
   const scrollToSection = (sectionId) => {
@@ -1383,11 +1751,7 @@ function App() {
               orders={orders}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               onViewProduct={handleViewProduct}
-              onTrackOrder={(order) => {
-                setSelectedOrderForTracking(order);
-                setCurrentPage("orderTracking");
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+              onTrackOrder={handleTrackOrder}
               onContactSupport={(order) => {
                 setSupportInitialOrder(order);
                 setCurrentPage("support");
@@ -1420,6 +1784,7 @@ function App() {
           {currentPage === "cartPage" && (
             <CartPage
               cart={cart}
+              apiToken={apiToken}
               onUpdateQuantity={updateQuantity}
               onRemove={removeFromCart}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
@@ -1470,31 +1835,7 @@ function App() {
                 setCurrentPage("delivery");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              onPlaceOrder={(method) => {
-                const newOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
-                let methodLabel = "Card Payment";
-                if (method === "cod" || method === "Cash on Delivery") methodLabel = "Cash on Delivery";
-                else if (method === "upi" || method === "UPI / Netbanking") methodLabel = "UPI / Netbanking";
-
-                const newOrder = {
-                  id: newOrderId,
-                  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-                  items: [...cart],
-                  total: cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + (deliveryMethod === 'express' ? 150 : 0),
-                  status: 'Processing',
-                  deliveryMethod,
-                  paymentMethod: methodLabel,
-                  customerName: user?.name
-                };
-                setOrders(prev => [newOrder, ...prev]);
-                setLastOrderId(newOrderId);
-                if (apiToken) {
-                  clearCart(apiToken).catch(() => { });
-                }
-                setCart([]);
-                setCurrentPage("orderConfirmation");
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+              onPlaceOrder={handlePlaceOrder}
             />
           )}
           {currentPage === "orderConfirmation" && (

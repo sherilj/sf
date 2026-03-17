@@ -141,12 +141,13 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
     const getVariants = () => {
         if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
             return product.variants.map(v => ({
+                id: v.id || v.variantId || v.variant_id,
                 label: v.variantName || v.name || v.label || v.weight || "Standard",
                 price: v.price || product.price,
                 mrp: v.mrp || product.mrp || (v.price * 1.2),
                 stockQuantity: v.stockQuantity || 0,
                 availabilityStatus: v.availabilityStatus || "IN_STOCK",
-                variantId: v.id || v.variantId,
+                variantId: v.id || v.variantId || v.variant_id,
                 sku: v.sku || "",
                 discount: v.discount || 0
             }));
