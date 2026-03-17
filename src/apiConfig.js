@@ -1,5 +1,5 @@
 // API endpoint configuration for easy maintenance
-export const BASE_URL = "https://caroyln-nonoccupational-thoroughgoingly.ngrok-free.dev";
+export const BASE_URL = "http://15.206.163.52";
 
 export const API_ENDPOINTS = {
   GET_USER_PROFILE: `${BASE_URL}/api/v1/users/profile`,
