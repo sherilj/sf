@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Search, Star, Heart, ChevronLeft, ChevronRight } from "lucide-react";
-import HeroSection from "./HeroSection";
 
 // Products are now fetched from API and passed via props.
 
@@ -12,11 +11,6 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
     if (filtered.length > 0) acc[cat] = filtered;
     return acc;
   }, {});
-
-  const handleShopNow = () => {
-    // Scroll to products section or stay on page
-    window.scrollTo({ top: 400, behavior: 'smooth' });
-  };
 
   const CategorySection = ({ title, products, onViewProduct, onToggleWishlist, wishlist, onAddToCart }) => {
     const scrollRef = React.useRef(null);
@@ -105,9 +99,6 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
 
   return (
     <div className="products-page">
-      {/* Hero Section */}
-      <HeroSection onShopNow={handleShopNow} />
-      
       {/* Header Area */}
       <div className="products-page-header">
         <h1 className="products-page-title">Our Products</h1>

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
-import HeroSection from "./HeroSection";
 
 const ImageWithLoader = ({ src, alt, className }) => {
   const [loaded, setLoaded] = useState(false);
@@ -27,11 +26,6 @@ const Contact = () => {
     message: ""
   });
 
-  const handleShopNow = () => {
-    // Navigate to products page
-    window.location.href = "#products";
-  };
-
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -49,7 +43,32 @@ const Contact = () => {
   return (
     <div className="contact-page">
       {/* Hero Section */}
-      <HeroSection title="Get in Touch" onShopNow={handleShopNow} />
+      <section className="contact-hero-section">
+        {/* Palm Leaves Decorations */}
+        <div className="palm-decoration palm-left">
+          <ImageWithLoader src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
+        </div>
+        <div className="palm-decoration palm-right">
+          <ImageWithLoader src="/corner-palm-leaves.png" alt="Palm leaf decoration" />
+        </div>
+
+        <div className="contact-hero-content">
+          <h1 className="contact-hero-title">Get in Touch</h1>
+          
+          <div className="hero-divider">
+            <span className="diamond-divider"></span>
+          </div>
+
+          <p className="hero-highlight">We'd love to hear from you.</p>
+          <p className="contact-hero-subtitle">
+            Whether you have a question about our products, orders, or just want to say hello.
+          </p>
+          
+          <div className="contact-hero-illustration">
+            <ImageWithLoader src="/contact-scroll-illustration.png" alt="Contact scroll illustration" />
+          </div>
+        </div>
+      </section>
 
       {/* Main Content: Info and Form */}
       <section className="contact-main-section">
