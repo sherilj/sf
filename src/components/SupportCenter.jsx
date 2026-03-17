@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MessageSquare, Headset, ChevronRight, HelpCircle, Package, Send, CheckCircle2 } from "lucide-react";
 
-const SupportCenter = ({ orders, ALL_PRODUCTS, onContinueShopping, initialOrder }) => {
+const SupportCenter = ({ orders, products = [], onContinueShopping, initialOrder }) => {
     const [selectedType, setSelectedType] = useState(initialOrder ? 'order' : null);
     const [selectedItem, setSelectedItem] = useState(initialOrder || null);
     const [message, setMessage] = useState("");
@@ -102,10 +102,10 @@ const SupportCenter = ({ orders, ALL_PRODUCTS, onContinueShopping, initialOrder 
                                     <select
                                         required
                                         style={selectStyle}
-                                        onChange={(e) => setSelectedItem(ALL_PRODUCTS.find(p => p.id === parseInt(e.target.value)))}
+                                        onChange={(e) => setSelectedItem(products.find(p => p.id === parseInt(e.target.value)))}
                                     >
                                         <option value="">Select Product</option>
-                                        {ALL_PRODUCTS.map(p => (
+                                        {products.map(p => (
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
                                     </select>

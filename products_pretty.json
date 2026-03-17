@@ -1,0 +1,103 @@
+{
+    "status":  200,
+    "message":  "Products retrieved successfully",
+    "success":  true,
+    "timestamp":  "2026-03-17 05:20:43",
+    "data":  [
+                 {
+                     "id":  1,
+                     "name":  "Chikki",
+                     "description":  "Yummy and tasty",
+                     "categoryId":  1,
+                     "isActive":  true,
+                     "createdAt":  "2026-03-16T12:06:43",
+                     "updatedAt":  "2026-03-16T13:01:59",
+                     "images":  [
+                                    {
+                                        "id":  141,
+                                        "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/f181ee77-14be-4bf2-9bc7-df3ac98ea779_Screenshot 2026-03-16 at 5.44.58 PM.png",
+                                        "productVariantId":  null
+                                    }
+                                ],
+                     "variants":  [
+                                      {
+                                          "id":  83,
+                                          "variantName":  "Chikki (10g)",
+                                          "sku":  "HON-500",
+                                          "mrp":  25.00,
+                                          "price":  24.00,
+                                          "discount":  5.00,
+                                          "stockQuantity":  30,
+                                          "availabilityStatus":  "LOW_STOCK",
+                                          "isActive":  true,
+                                          "images":  [
+                                                         {
+                                                             "id":  142,
+                                                             "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/1134abfe-c3b2-4d4a-8b1d-76f20f351744_Screenshot 2026-03-16 at 6.03.05 PM.png",
+                                                             "productVariantId":  83
+                                                         },
+                                                         {
+                                                             "id":  143,
+                                                             "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/d930ed82-00f0-4e57-9341-0ba784038769_Screenshot 2026-03-16 at 6.03.25 PM.png",
+                                                             "productVariantId":  83
+                                                         }
+                                                     ]
+                                      },
+                                      {
+                                          "id":  84,
+                                          "variantName":  "Chikki (50g)",
+                                          "sku":  "HON 500",
+                                          "mrp":  100.00,
+                                          "price":  90.00,
+                                          "discount":  10.00,
+                                          "stockQuantity":  0,
+                                          "availabilityStatus":  "OUT_OF_STOCK",
+                                          "isActive":  true,
+                                          "images":  [
+                                                         {
+                                                             "id":  144,
+                                                             "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/654774bb-861b-4788-ade0-bac41e64cae1_Screenshot 2026-03-16 at 6.05.05 PM.png",
+                                                             "productVariantId":  84
+                                                         }
+                                                     ]
+                                      }
+                                  ]
+                 },
+                 {
+                     "id":  2,
+                     "name":  "Dairy milk",
+                     "description":  "fgajkaghaj",
+                     "categoryId":  1,
+                     "isActive":  true,
+                     "createdAt":  "2026-03-17T04:01:42",
+                     "updatedAt":  "2026-03-17T04:09:53",
+                     "images":  [
+                                    {
+                                        "id":  147,
+                                        "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/4dc73b4d-8dc5-463f-8730-b6fc54654e44_Screenshot 2026-03-11 121852.png",
+                                        "productVariantId":  null
+                                    }
+                                ],
+                     "variants":  [
+                                      {
+                                          "id":  86,
+                                          "variantName":  "500  jar",
+                                          "sku":  "Hon-50",
+                                          "mrp":  850.00,
+                                          "price":  748.00,
+                                          "discount":  12.00,
+                                          "stockQuantity":  48,
+                                          "availabilityStatus":  "IN_STOCK",
+                                          "isActive":  false,
+                                          "images":  [
+                                                         {
+                                                             "id":  148,
+                                                             "imageUrl":  "https://deliveryapp-product-images-2026.s3.amazonaws.com/085171bd-ba8b-43ee-ba32-5faade527112_Screenshot 2026-03-12 090213.png",
+                                                             "productVariantId":  86
+                                                         }
+                                                     ]
+                                      }
+                                  ]
+                 }
+             ]
+}

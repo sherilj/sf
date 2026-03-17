@@ -18,6 +18,49 @@
     font-family: 'Poppins', sans-serif;
 }
 
+/* Variant Selector */
+.p-variant-selector {
+    margin: 8px 0;
+}
+
+.p-variant-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+    color: #333;
+}
+
+.p-variant-info {
+    margin: 8px 0;
+    color: #666;
+    font-size: 12px;
+}
+
+.p-stock-warning {
+    color: #e74c3c;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.p-add-cart-btn {
+    background-color: #2e6b27;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: background-color 0.2s;
+}
+
+.p-add-cart-btn:hover {
+    background-color: #245620;
+}
+
 .products-page-subtitle {
     color: #7C3225;
     font-size: 1.1rem;
@@ -394,11 +437,10 @@
     border: 2px solid #EBEBEB;
     background: #FFF;
     border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #4A4A4A;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-width: 120px;
+    text-align: center;
 }
 
 .variant-btn:hover {
@@ -410,4 +452,60 @@
     border-color: #7C3225;
     background-color: #7C3225;
     color: #FFF;
+}
+
+.variant-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #ccc;
+}
+
+.variant-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.variant-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #7C3225;
+    margin-bottom: 2px;
+}
+
+.variant-stock {
+    font-size: 11px;
+    color: #666;
+}
+
+.variant-btn.active .variant-price {
+    color: #FFF;
+}
+
+.variant-btn.active .variant-stock {
+    color: #FFF;
+    opacity: 0.9;
+}
+
+/* Stock Information Styles */
+.pd-stock-info {
+    margin: 12px 0;
+}
+
+.pd-in-stock {
+    color: #27ae60;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.pd-low-stock {
+    color: #f39c12;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.pd-out-of-stock {
+    color: #e74c3c;
+    font-weight: 600;
+    font-size: 14px;
 }

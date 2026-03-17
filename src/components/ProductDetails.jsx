@@ -13,7 +13,8 @@ import {
     Award,
     ArrowRight
 } from "lucide-react";
-import { ALL_PRODUCTS } from "./ProductsPage";
+// ALL_PRODUCTS import removed, uses products prop instead
+
 
 // Helper for check circle icon
 const CheckCircle = ({ size, color }) => (
@@ -23,7 +24,7 @@ const CheckCircle = ({ size, color }) => (
     </svg>
 );
 
-const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist }) => {
+const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist }) => {
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
 
@@ -138,13 +139,26 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
     const dynamicContent = getDynamicContent();
 
     const getVariants = () => {
-        const cat = product.category.toLowerCase();
+        if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+            return product.variants.map(v => ({
+                label: v.variantName || v.name || v.label || v.weight || "Standard",
+                price: v.price || product.price,
+                mrp: v.mrp || product.mrp || (v.price * 1.2),
+                stockQuantity: v.stockQuantity || 0,
+                availabilityStatus: v.availabilityStatus || "IN_STOCK",
+                variantId: v.id || v.variantId,
+                sku: v.sku || "",
+                discount: v.discount || 0
+            }));
+        }
+
+        const cat = typeof product.category === 'string' ? product.category.toLowerCase() : (product.category?.name?.toLowerCase() || "");
         const basePrice = product.price;
 
         if (cat === "honey") {
             return [
                 { label: "250g", price: basePrice, multiplier: 1 },
-                { label: "500g", price: Math.round(basePrice * 1.8), multiplier: 2 }, // Discounted double pack approx
+                { label: "500g", price: Math.round(basePrice * 1.8), multiplier: 2 },
                 { label: "1kg", price: Math.round(basePrice * 3.4), multiplier: 4 }
             ];
         } else if (cat === "ghee") {
@@ -154,7 +168,6 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                 { label: "2L", price: Math.round(basePrice * 3.6), multiplier: 4 }
             ];
         } else {
-            // Chikki etc
             return [
                 { label: "200g", price: basePrice, multiplier: 1 },
                 { label: "500g", price: Math.round(basePrice * 2.2), multiplier: 2.5 },
@@ -224,8 +237,8 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
     };
 
     // Related products logic
-    const relatedProducts = ALL_PRODUCTS
-        .filter(p => p.id !== product.id && p.category === product.category)
+    const relatedProducts = products
+        .filter(p => p.id !== product.id && (p.category === product.category || p.category?.name === product.category?.name))
         .slice(0, 3);
 
     // Reset isAdded when variant or product changes
@@ -294,12 +307,23 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
 
                     <div className="pd-price-row">
                         <span className="pd-current-price">₹{selectedVariant.price}</span>
-                        <span className="pd-old-price">₹{Math.round(selectedVariant.price * 1.2)}</span>
-                        <span className="pd-save-badge">Save ₹{Math.round(selectedVariant.price * 0.2)}</span>
+                        <span className="pd-old-price">₹{Math.round(selectedVariant.mrp || selectedVariant.price * 1.2)}</span>
+                        <span className="pd-save-badge">Save ₹{Math.round((selectedVariant.mrp || selectedVariant.price * 1.2) - selectedVariant.price)}</span>
+                    </div>
+                    
+                    {/* Stock Information */}
+                    <div className="pd-stock-info">
+                        {selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? (
+                            <span className="pd-out-of-stock">Out of Stock</span>
+                        ) : selectedVariant.availabilityStatus === 'LOW_STOCK' ? (
+                            <span className="pd-low-stock">Only {selectedVariant.stockQuantity} left!</span>
+                        ) : (
+                            <span className="pd-in-stock">In Stock ({selectedVariant.stockQuantity} available)</span>
+                        )}
                     </div>
 
                     <div className="pd-variant-selector">
-                        <span className="pd-variant-label">Select Quantity:</span>
+                        <span className="pd-variant-label">Select Variant:</span>
                         <div className="variant-options">
                             {variants.map((v, i) => (
                                 <button
@@ -308,8 +332,15 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                                     onClick={() => {
                                         setSelectedVariant(v);
                                     }}
+                                    disabled={v.availabilityStatus === 'OUT_OF_STOCK'}
                                 >
-                                    {v.label}
+                                    <div className="variant-name">{v.label}</div>
+                                    <div className="variant-price">₹{v.price}</div>
+                                    <div className="variant-stock">
+                                        {v.availabilityStatus === 'OUT_OF_STOCK' ? 'Out of Stock' : 
+                                         v.availabilityStatus === 'LOW_STOCK' ? `Only ${v.stockQuantity} left` : 
+                                         'In Stock'}
+                                    </div>
                                 </button>
                             ))}
                         </div>
@@ -417,11 +448,7 @@ const ProductDetails = ({ product, cart, wishlist, onBack, onViewProduct, onAddT
                 </div>
 
                 <div className="you-may-like-grid horizontal-scroll">
-                    {[
-                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Honey").slice(0, 3),
-                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Ghee").slice(0, 1),
-                        ...ALL_PRODUCTS.filter(p => p.id !== product.id && p.category === "Chikki").slice(0, 1)
-                    ].map(p => (
+                    {products.filter(p => p.id !== product.id).slice(0, 5).map(p => (
                         <div key={p.id} className="premium-mini-card" onClick={() => onViewProduct(p)}>
                             <div className="p-mini-img-wrap">
                                 <img src={p.img} alt={p.name} />

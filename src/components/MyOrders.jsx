@@ -1,32 +1,42 @@
 import React from "react";
 import { Package, ChevronRight, Calendar, MapPin, Truck } from "lucide-react";
+import HeroSection from "./HeroSection";
 
 const MyOrders = ({ orders, onContinueShopping, onViewProduct, onTrackOrder, onContactSupport }) => {
+    const handleShopNow = () => {
+        onContinueShopping();
+    };
+
     if (orders.length === 0) {
         return (
-            <div className="empty-orders-container fade-in" style={{ padding: '80px 20px', textAlign: 'center', minHeight: '60vh' }}>
-                <div className="empty-cart-icon" style={{ background: '#FEF8F0', padding: '30px', borderRadius: '50%', display: 'inline-block', marginBottom: '24px' }}>
-                    <Package size={64} color="#7C3225" />
+            <div className="my-orders-page">
+                <HeroSection title="My Orders" onShopNow={handleShopNow} />
+                <div className="empty-orders-container fade-in" style={{ padding: '80px 20px', textAlign: 'center', minHeight: '60vh' }}>
+                    <div className="empty-cart-icon" style={{ background: '#FEF8F0', padding: '30px', borderRadius: '50%', display: 'inline-block', marginBottom: '24px' }}>
+                        <Package size={64} color="#7C3225" />
+                    </div>
+                    <h2 style={{ color: '#7C3225', fontSize: '2rem', marginBottom: '16px' }}>No orders yet</h2>
+                    <p style={{ color: '#868889', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
+                        You haven't placed any orders yet. Start shopping to see your orders here!
+                    </p>
+                    <button
+                        className="btn-product"
+                        onClick={onContinueShopping}
+                        style={{ minWidth: '200px' }}
+                    >
+                        Start Shopping
+                    </button>
                 </div>
-                <h2 style={{ color: '#7C3225', fontSize: '2rem', marginBottom: '16px' }}>No orders yet</h2>
-                <p style={{ color: '#868889', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
-                    You haven't placed any orders yet. Start shopping to see your orders here!
-                </p>
-                <button
-                    className="btn-product"
-                    onClick={onContinueShopping}
-                    style={{ minWidth: '200px' }}
-                >
-                    Start Shopping
-                </button>
             </div>
         );
     }
 
     return (
-        <div className="my-orders-page fade-in" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
-            <h1 style={{ color: '#7C3225', fontSize: '2.5rem', marginBottom: '10px', fontWeight: '700' }}>My Orders</h1>
-            <p style={{ color: '#868889', marginBottom: '40px' }}>Track and manage your recent orders.</p>
+        <div className="my-orders-page">
+            <HeroSection title="My Orders" onShopNow={handleShopNow} />
+            <div className="my-orders-page fade-in" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
+                <h1 style={{ color: '#7C3225', fontSize: '2.5rem', marginBottom: '10px', fontWeight: '700' }}>My Orders</h1>
+                <p style={{ color: '#868889', marginBottom: '40px' }}>Track and manage your recent orders.</p>
 
             <div className="orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {orders.map((order) => (
@@ -137,6 +147,7 @@ const MyOrders = ({ orders, onContinueShopping, onViewProduct, onTrackOrder, onC
                         </div>
                     </div>
                 ))}
+            </div>
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Leaf, ShieldCheck, Zap, CheckCircle } from "lucide-react";
+import HeroSection from "./HeroSection";
 
 const ImageWithLoader = ({ src, alt, className }) => {
   const [loaded, setLoaded] = useState(false);
@@ -21,19 +22,7 @@ const LandingPage = ({ onNavigateToProducts, scrollToSection, onNavigateToOurSto
   return (
     <div className="landing-page">
       {/* Hero Section */}
-      <section className="hero-section text-center">
-        <div className="hero-image-container">
-          <img src="/1st.png" alt="Ayurvedic Herbs" className="hero-img-main" />
-          <div className="hero-content">
-            <h1 className="hero-title">Nourish your Body, Naturally</h1>
-            <div className="title-divider"></div>
-            <div className="landing-title-divider" style={{ marginBottom: '18px' }}>
-              <span className="diamond"></span>
-            </div>
-            <button className="btn-secondary" onClick={() => onNavigateToProducts("All")}>Shop Now</button>
-          </div>
-        </div>
-      </section>
+      <HeroSection onShopNow={() => onNavigateToProducts("All")} />
 
       {/* Essentials Section */}
       <section id="essentials" className="essentials-section">

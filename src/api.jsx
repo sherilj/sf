@@ -116,3 +116,15 @@ export const verifyOtp = (payload) => fetchJson(API_ENDPOINTS.VERIFY_OTP, {
 	headers: { "Content-Type": "application/json" },
 	body: JSON.stringify(payload),
 });
+
+// Fetches all categories.
+export const getCategories = () => fetchJson(API_ENDPOINTS.GET_CATEGORIES);
+
+// Fetches a specific category.
+export const getCategory = (id) => fetchJson(API_ENDPOINTS.GET_CATEGORY(id));
+
+// Fetches all products.
+export const getProducts = () => fetchJson(API_ENDPOINTS.GET_PRODUCTS);
+
+// Fetches a specific product.
+export const getProduct = (id) => fetchJson(API_ENDPOINTS.GET_PRODUCT(id));

@@ -1,0 +1,2 @@
+{"status":200,"message":"Categories retrieved successfully","success":true,"timestamp":"2026-03-17 05:20:15","data":[{"id":1,"name":"Sweet","description":"","isActive":true,"createdAt":"2026-03-16T12:00:51","status":"active"}]}
+

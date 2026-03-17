@@ -1,136 +1,24 @@
 import React, { useState } from "react";
 import { Search, Star, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import HeroSection from "./HeroSection";
 
-export const ALL_PRODUCTS = [
-  {
-    id: 1,
-    name: "Wild Forest Honey",
-    category: "Honey",
-    price: 450,
-    rating: 4.8,
-    img: "/wild_honey.png",
-    desc: "Pure, raw honey collected from the deep forests. Unprocessed and unpasteurized to retain natural enzymes.",
-    badgeLeft: "20% OFF",
-    badgeRight: "BEST SELLER",
-  },
-  {
-    id: 2,
-    name: "Tulsi Honey",
-    category: "Honey",
-    price: 320,
-    rating: 4.6,
-    img: "/tulsi_honey.png",
-    desc: "Infused with the natural goodness of Tulsi leaves. Enhances immunity and effectively relieves coughs & colds.",
-  },
-  {
-    id: 3,
-    name: "Multi-Flora Honey",
-    category: "Honey",
-    price: 280,
-    rating: 4.5,
-    img: "/multi_flora_honey.png",
-    desc: "A rich and natural blend of nectar collected from multiple flowers. Perfect for your daily sweetening needs.",
-  },
-  {
-    id: 4,
-    name: "Kashmir Acacia Honey",
-    category: "Honey",
-    price: 550,
-    rating: 4.9,
-    img: "/wild_honey.png",
-    desc: "Light, mild, and crystallized acacia honey sourced from the pristine valleys of Kashmir.",
-    badgeRight: "PREMIUM",
-  },
-  {
-    id: 5,
-    name: "Peanut Chikki Bar",
-    category: "Chikki",
-    price: 150,
-    rating: 4.9,
-    img: "/chikki_pic.png",
-    desc: "Crunchy roasted peanuts blended with organic jaggery. A perfect energy boosting traditional snack.",
-    badgeLeft: "15% OFF",
-  },
-  {
-    id: 6,
-    name: "Mixed Dry Fruit Chikki",
-    category: "Chikki",
-    price: 350,
-    rating: 4.9,
-    img: "/chikki_pic.png",
-    desc: "A royal blend of cashews, almonds, and pistachios in jaggery. Perfect premium gifting choice.",
-    badgeRight: "BEST SELLER",
-  },
-  {
-    id: 7,
-    name: "Sesame Jaggery Chikki",
-    category: "Chikki",
-    price: 120,
-    rating: 4.7,
-    img: "/chikki_pic.png",
-    desc: "Iron-rich sesame seeds bound by pure jaggery. A traditional winter favorite for warmth and health.",
-  },
-  {
-    id: 8,
-    name: "Crushed Peanut Chikki",
-    category: "Chikki",
-    price: 140,
-    rating: 4.8,
-    img: "/chikki_pic.png",
-    desc: "Finely crushed roasted peanuts with thin jaggery layers for an effortless melting crunch.",
-  },
-  {
-    id: 9,
-    name: "A2 Desi Cow Ghee",
-    category: "Ghee",
-    price: 1200,
-    rating: 4.8,
-    img: "/ghee_pic.png",
-    desc: "Traditionally bilona churned ghee made from A2 milk of indigenous cows. Golden, granular, and pure.",
-    badgeLeft: "10% OFF",
-    badgeRight: "PREMIUM",
-  },
-  {
-    id: 10,
-    name: "Pure Buffalo Ghee",
-    category: "Ghee",
-    price: 800,
-    rating: 4.7,
-    img: "/ghee_pic.png",
-    desc: "Rich, aromatic, and creamy buffalo milk ghee. Ideal for deep frying and traditional Indian sweets.",
-  },
-  {
-    id: 11,
-    name: "Gir Cow Cultured Ghee",
-    category: "Ghee",
-    price: 1500,
-    rating: 4.9,
-    img: "/ghee_pic.png",
-    desc: "Made from authentic Gir cow milk curd. Rich in nutrition with an unmistakable traditional aroma.",
-    badgeRight: "BEST SELLER",
-  },
-  {
-    id: 12,
-    name: "Farm Fresh Cow Ghee",
-    category: "Ghee",
-    price: 900,
-    rating: 4.8,
-    img: "/ghee_pic.png",
-    desc: "Wholesome everyday ghee sourced directly from local ethical dairy farmers without preservatives.",
-  },
-];
+// Products are now fetched from API and passed via props.
 
-const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery, wishlist, onToggleWishlist }) => {
 
-  const categories = ["All", "Honey", "Chikki", "Ghee"];
+const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery, wishlist, onToggleWishlist, products = [], categories = ["All"], onAddToCart }) => {
 
   const groupedProducts = categories.filter(c => c !== "All").reduce((acc, cat) => {
-    const products = ALL_PRODUCTS.filter(p => p.category === cat && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (products.length > 0) acc[cat] = products;
+    const filtered = products.filter(p => (p.category === cat || (p.category?.name === cat)) && p.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (filtered.length > 0) acc[cat] = filtered;
     return acc;
   }, {});
 
-  const CategorySection = ({ title, products, onViewProduct, onToggleWishlist, wishlist }) => {
+  const handleShopNow = () => {
+    // Scroll to products section or stay on page
+    window.scrollTo({ top: 400, behavior: 'smooth' });
+  };
+
+  const CategorySection = ({ title, products, onViewProduct, onToggleWishlist, wishlist, onAddToCart }) => {
     const scrollRef = React.useRef(null);
 
     const scroll = (direction) => {
@@ -184,12 +72,18 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
                   </div>
                   <h3 className="p-title">{product.name}</h3>
                   <p className="p-desc">{product.desc}</p>
+                  
                   <div className="p-card-footer">
                     <div className="p-price-block">
                       <div className="p-price-row">
-                        <span className="p-mrp">₹{Math.round(product.price * 1.2)}</span>
+                        <span className="p-mrp">₹{Math.round(product.mrp || product.price * 1.2)}</span>
                         <span className="p-price">₹{product.price}</span>
                       </div>
+                      {product.selectedVariant?.stockQuantity <= 10 && (
+                        <div className="p-stock-warning">
+                          <small>Only {product.selectedVariant.stockQuantity} left!</small>
+                        </div>
+                      )}
                     </div>
                     <div className="p-card-buttons">
                       <button className="p-view-btn" onClick={() => onViewProduct(product)}>
@@ -211,6 +105,9 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
 
   return (
     <div className="products-page">
+      {/* Hero Section */}
+      <HeroSection onShopNow={handleShopNow} />
+      
       {/* Header Area */}
       <div className="products-page-header">
         <h1 className="products-page-title">Our Products</h1>
@@ -248,15 +145,17 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
               onViewProduct={onViewProduct}
               onToggleWishlist={onToggleWishlist}
               wishlist={wishlist}
+              onAddToCart={onAddToCart}
             />
           ))
         ) : (
           <CategorySection
             title={`${activeCategory} Selection`}
-            products={ALL_PRODUCTS.filter(p => p.category === activeCategory && p.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+            products={products.filter(p => (p.category === activeCategory || p.category?.name === activeCategory) && p.name?.toLowerCase().includes(searchQuery.toLowerCase()))}
             onViewProduct={onViewProduct}
             onToggleWishlist={onToggleWishlist}
             wishlist={wishlist}
+            onAddToCart={onAddToCart}
           />
         )}
       </div>

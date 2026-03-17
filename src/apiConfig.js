@@ -16,4 +16,8 @@ export const API_ENDPOINTS = {
   CLEAR_CART: `${BASE_URL}/api/v1/cart/clear`,
   SEND_OTP: `${BASE_URL}/api/v1/auth/send-otp`,
   VERIFY_OTP: `${BASE_URL}/api/v1/auth/verify-otp`,
+  GET_CATEGORIES: `${BASE_URL}/api/v1/categories`,
+  GET_CATEGORY: (id) => `${BASE_URL}/api/v1/categories/${id}`,
+  GET_PRODUCTS: `${BASE_URL}/api/v1/products`,
+  GET_PRODUCT: (id) => `${BASE_URL}/api/v1/products/${id}`,
 };

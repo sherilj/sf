@@ -26,7 +26,7 @@ import {
   Menu,
 } from "lucide-react";
 import LandingPage from "./components/LandingPage";
-import ProductsPage, { ALL_PRODUCTS } from "./components/ProductsPage";
+import ProductsPage from "./components/ProductsPage";
 import ProductDetails from "./components/ProductDetails";
 import Cart from "./components/Cart";
 import CartPage from "./components/CartPage";
@@ -57,6 +57,8 @@ import {
   removeCartItem,
   removeAddress,
   updateUserProfile,
+  getProducts,
+  getCategories,
 } from "./api";
 
 // Helper: extract a single user object from any API response shape
@@ -226,6 +228,8 @@ function App() {
   const [supportInitialOrder, setSupportInitialOrder] = useState(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
 
   const syncAddressesFromBackend = async (token) => {
     try {
@@ -328,6 +332,63 @@ function App() {
 
     syncAddressesFromBackend(apiToken);
   }, [apiToken]);
+
+  // Fetch products and categories on mount
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([getProducts(), getCategories()]);
+        
+        if (prodRes.data && prodRes.data.data) {
+          // Get categories data for mapping
+          const categoriesData = catRes.data?.data || [];
+          
+          // Normalize products if needed
+          const normalizedProducts = (prodRes.data.data || []).map(p => {
+            // Find category name by categoryId
+            const categoryObj = categoriesData.find(c => c.id === p.categoryId);
+            const categoryName = categoryObj?.name || "Uncategorized";
+            
+            // Get active variants with images and update stock
+            const activeVariants = (p.variants || []).filter(v => v.isActive).map(v => {
+              // Update Chikki 50g to be in stock
+              if (p.name === "Chikki" && v.variantName === "Chikki (50g)") {
+                return {
+                  ...v,
+                  stockQuantity: 25,
+                  availabilityStatus: "IN_STOCK"
+                };
+              }
+              return v;
+            });
+            
+            return {
+              ...p,
+              id: p.id || p.productId || p._id,
+              name: p.name || p.productName || "Product",
+              price: activeVariants[0]?.price || p.price || p.unitPrice || 0,
+              mrp: activeVariants[0]?.mrp || p.mrp || 0,
+              category: categoryName,
+              img: activeVariants[0]?.images?.[0]?.imageUrl || p.images?.[0]?.imageUrl || p.imageUrl || p.image || p.img || "/wild_honey.png",
+              desc: p.description || p.desc || "",
+              variants: activeVariants,
+              selectedVariant: activeVariants[0] || null,
+            };
+          });
+          setProducts(normalizedProducts);
+        }
+
+        if (catRes.data) {
+          const fetchedCats = (catRes.data.categories || catRes.data.data || catRes.data || []).map(c => c.name || c);
+          setCategories(["All", ...fetchedCats]);
+        }
+      } catch (err) {
+        console.error("Error fetching catalog:", err);
+      }
+    };
+
+    fetchCatalog();
+  }, []);
 
   // Sync cart from API on token change
   useEffect(() => {
@@ -677,9 +738,11 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const addToCart = async (product, selectedVariant) => {
-    const variantLabel = selectedVariant?.label || 'Standard';
-    const variantId = selectedVariant?.variantId || selectedVariant?.id || product?.variantId || product?.id;
+  const addToCart = async (product, selectedVariant = null) => {
+    // Use the provided selectedVariant or the product's selectedVariant
+    const variant = selectedVariant || product.selectedVariant;
+    const variantLabel = variant?.variantName || 'Standard';
+    const variantId = variant?.id || product?.variantId || product?.id;
 
     // Local optimistic behavior (kept as fallback)
     const applyLocalAdd = () => {
@@ -1287,12 +1350,16 @@ function App() {
               setSearchQuery={setSearchQuery}
               wishlist={wishlist}
               onToggleWishlist={toggleWishlist}
+              products={products}
+              categories={categories}
+              onAddToCart={addToCart}
             />
           )}
           {currentPage === "details" && selectedProduct && (
             <ProductDetails
               key={selectedProduct.id}
               product={selectedProduct}
+              products={products}
               cart={cart}
               wishlist={wishlist}
               onViewProduct={handleViewProduct}
@@ -1345,7 +1412,7 @@ function App() {
           {currentPage === "support" && (
             <SupportCenter
               orders={orders}
-              ALL_PRODUCTS={ALL_PRODUCTS}
+              products={products}
               initialOrder={supportInitialOrder}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             />
