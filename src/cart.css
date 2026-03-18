@@ -479,11 +479,26 @@
   margin: 0;
 }
 
+.cp-item-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-item-mrp {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #868889;
+  text-decoration: line-through;
+  font-weight: 600;
+}
+
 .cp-item-right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  align-self: stretch;
+  justify-content: space-between;
 }
 
 .cp-qty-row {

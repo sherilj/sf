@@ -199,7 +199,14 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
 
             {/* Cart items */}
             <div className="cp-items-list">
-              {cart.map((item) => (
+              {cart.map((item) => {
+                const itemPrice = toNumber(item.price);
+                const providedMrp = toNumber(item.mrp ?? item.originalPrice ?? item.compareAtPrice);
+                const fallbackMrp = Math.round(itemPrice * 1.2);
+                const itemMrp = providedMrp > 0 ? providedMrp : fallbackMrp;
+                const showStrikedPrice = itemMrp > itemPrice;
+
+                return (
                 <div key={item.cartItemId} className="cp-item">
                   <div className="cp-item-img">
                     <img src={item.img} alt={item.name} />
@@ -212,9 +219,15 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
                         <span className="cp-item-variant">Quantity: {item.selectedVariant}</span>
                       )}
                     </div>
-                    <p className="cp-item-price">₹{item.price}</p>
+                    <div className="cp-item-price-row">
+                      <p className="cp-item-price">₹{item.price}</p>
+                      {showStrikedPrice && <p className="cp-item-mrp">₹{Math.round(itemMrp)}</p>}
+                    </div>
                   </div>
                   <div className="cp-item-right">
+                    <button className="cp-remove-btn" onClick={() => onRemove(item.cartItemId)}>
+                      <X size={13} /> REMOVE
+                    </button>
                     <div className="cp-qty-row">
                       <button
                         className="cp-qty-btn"
@@ -230,13 +243,10 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
                         <Plus size={14} />
                       </button>
                     </div>
-                    <p className="cp-item-total">₹{item.price * item.quantity}</p>
-                    <button className="cp-remove-btn" onClick={() => onRemove(item.cartItemId)}>
-                      <X size={13} /> REMOVE
-                    </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <button className="cp-add-more-btn" onClick={onContinueShopping}>
