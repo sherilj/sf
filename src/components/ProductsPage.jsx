@@ -14,6 +14,9 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
 
   const CategorySection = ({ title, products, onViewProduct, onToggleWishlist, wishlist, onAddToCart }) => {
     const scrollRef = React.useRef(null);
+    
+    // Determine if arrows should be shown
+    const showArrows = products.length > 3;
 
     const scroll = (direction) => {
       if (scrollRef.current) {
@@ -27,10 +30,12 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
       <div className="category-section">
         <h2 className="category-section-title">{title}</h2>
         <div className="products-slider-container">
-          <button className="slider-arrow left" onClick={() => scroll('left')}>
-            <ChevronLeft size={24} />
-          </button>
-          <div className="products-page-grid" ref={scrollRef}>
+          {showArrows && (
+            <button className="slider-arrow left" onClick={() => scroll('left')}>
+              <ChevronLeft size={24} />
+            </button>
+          )}
+          <div className={`products-page-grid ${!showArrows ? 'left-aligned' : ''}`} ref={scrollRef}>
             {products.map((product) => (
               <div className="p-card-vertical" key={product.id}>
                 <div className="p-card-image">
@@ -89,9 +94,11 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
               </div>
             ))}
           </div>
-          <button className="slider-arrow right" onClick={() => scroll('right')}>
-            <ChevronRight size={24} />
-          </button>
+          {showArrows && (
+            <button className="slider-arrow right" onClick={() => scroll('right')}>
+              <ChevronRight size={24} />
+            </button>
+          )}
         </div>
       </div>
     );

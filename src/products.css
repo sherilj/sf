@@ -132,17 +132,33 @@
     color: #000000;
 }
 
-/* SIDE BY SIDE PRODUCT CARDS */
-/* .products-page-grid {
+/* Product Grid Layout */
+.products-page-grid {
     display: flex;
-    flex-direction: row;
     gap: 20px;
-    max-width: none;
-    margin: 0 auto;
-    padding: 0 20px;
     overflow-x: auto;
-    overflow-y: hidden;
-} */
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0 10px;
+    justify-content: flex-start !important; /* Force left alignment */
+}
+
+.products-page-grid::-webkit-scrollbar {
+    display: none;
+}
+
+/* Left-aligned layout when no arrows */
+.products-page-grid.left-aligned {
+    justify-content: flex-start !important;
+    overflow-x: visible;
+    flex-wrap: wrap; /* Allow wrapping when no scrolling */
+}
+
+/* Force left alignment for slider container */
+.products-slider-container {
+    justify-content: flex-start !important;
+}
 
 .p-card {
     background-color: #FFF;

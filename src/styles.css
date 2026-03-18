@@ -2543,9 +2543,18 @@ main.main-content.has-landing {
 
 /* SIDE BY SIDE PRODUCT CARDS */
 .products-page-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 20px !important;
+  overflow-x: auto !important;
+  scroll-behavior: smooth !important;
+  padding: 20px 10px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  justify-content: flex-start !important;
+}
+
+.category-section {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
@@ -2786,6 +2795,7 @@ main.main-content.has-landing {
   display: flex;
   align-items: center;
   padding: 0 10px;
+  justify-content: flex-start !important; /* Force left alignment */
 }
 
 .products-page-grid {
@@ -2799,6 +2809,7 @@ main.main-content.has-landing {
   /* Firefox */
   -ms-overflow-style: none;
   /* IE/Edge */
+  justify-content: flex-start !important; /* Force left alignment */
 }
 
 .products-page-grid::-webkit-scrollbar {
@@ -2809,10 +2820,6 @@ main.main-content.has-landing {
 .slider-arrow {
   position: absolute;
   top: 45%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  background-color: #FFF;
   border: 1px solid #EBEBEB;
   border-radius: 50%;
   display: flex;
@@ -2820,6 +2827,9 @@ main.main-content.has-landing {
   justify-content: center;
   cursor: pointer;
   z-index: 100;
+}
+
+.slider-arrow {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   color: #7C3225;

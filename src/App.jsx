@@ -447,6 +447,19 @@ function App() {
     syncAddressesFromBackend(apiToken);
   }, [apiToken]);
 
+  // Update checkout details when user or profile changes
+  useEffect(() => {
+    if (user?.email || profile?.email) {
+      setCheckoutDetails(prev => ({
+        ...prev,
+        email: user?.email || profile?.email || prev.email,
+        firstName: user?.name?.split(' ')[0] || profile?.name?.split(' ')[0] || prev.firstName,
+        lastName: user?.name?.split(' ').slice(1).join(' ') || profile?.name?.split(' ').slice(1).join(' ') || prev.lastName,
+        phone: user?.phone || profile?.phone || prev.phone,
+      }));
+    }
+  }, [user, profile]);
+
   // Fetch products and categories on mount
   useEffect(() => {
     const fetchCatalog = async () => {
@@ -1263,6 +1276,16 @@ function App() {
       setTimeout(() => setSaveSuccessMessage(""), 3000);
       return;
     }
+    
+    // Populate checkout details with logged-in user info
+    setCheckoutDetails(prev => ({
+      ...prev,
+      email: user?.email || profile?.email || prev.email,
+      firstName: user?.name?.split(' ')[0] || profile?.name?.split(' ')[0] || prev.firstName,
+      lastName: user?.name?.split(' ').slice(1).join(' ') || profile?.name?.split(' ').slice(1).join(' ') || prev.lastName,
+      phone: user?.phone || profile?.phone || prev.phone,
+    }));
+    
     setCurrentPage("checkout");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
