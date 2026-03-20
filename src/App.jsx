@@ -205,40 +205,48 @@ function formatOrderDate(value) {
 }
 
 function mapApiOrderItemToLocal(item) {
-  const productObj = item?.product || item?.productDetails || {};
-  const image = item?.imageUrl || item?.image || item?.img || productObj?.imageUrl || productObj?.image || "/wild_honey.png";
+  const productObj = item?.product || item?.productDetails || item?.product_detail || item?.data || {};
+  const image = item?.imageUrl || item?.image || item?.img || item?.product_image || productObj?.imageUrl || productObj?.image || productObj?.img || "/wild_honey.png";
 
   return {
-    id: item?.id || item?.productId || item?.product_id || item?.variantId || item?.variant_id,
-    name: item?.productName || item?.name || productObj?.name || "Product",
+    id: item?.id || item?.productId || item?.product_id || item?.variantId || item?.variant_id || item?.variant_id || productObj?.id || "",
+    name: item?.productName || item?.name || item?.title || item?.product_title || productObj?.name || productObj?.productName || productObj?.title || "Product",
     img: image,
-    variant: item?.variantName || item?.variant || item?.size || "",
-    quantity: Number(item?.quantity || item?.qty || 1),
-    price: Number(item?.unitPrice || item?.price || item?.amount || 0),
+    variant: item?.variantName || item?.variant || item?.size || item?.variant_name || productObj?.variantName || "",
+    quantity: Number(item?.quantity || item?.qty || item?.item_quantity || 1),
+    price: Number(item?.unitPrice || item?.price || item?.amount || item?.unit_price || item?.price_per_unit || 0),
   };
 }
 
 function mapApiOrderToLocal(order, fallback = {}) {
-  const rawItems = Array.isArray(order?.items)
-    ? order.items
-    : (Array.isArray(order?.orderItems) ? order.orderItems : []);
+  // Try all possible keys for the items array
+  const rawItems = 
+    (Array.isArray(order?.items) ? order.items : null) ||
+    (Array.isArray(order?.orderItems) ? order.orderItems : null) ||
+    (Array.isArray(order?.order_items) ? order.order_items : null) ||
+    (Array.isArray(order?.products) ? order.products : null) ||
+    (Array.isArray(order?.cartItems) ? order.cartItems : null) ||
+    (Array.isArray(order?.cart_items) ? order.cart_items : null) ||
+    (Array.isArray(order?.data?.items) ? order.data.items : null) ||
+    (Array.isArray(order?.data?.orderItems) ? order.data.orderItems : null) ||
+    [];
 
-  const totalRaw = order?.totalAmount ?? order?.grandTotal ?? order?.total ?? order?.amount ?? fallback.total ?? 0;
+  const totalRaw = order?.totalAmount ?? order?.grandTotal ?? order?.total ?? order?.amount ?? order?.total_amount ?? order?.total_price ?? fallback.total ?? 0;
   const total = Number(totalRaw);
 
   return {
     ...fallback,
     ...order,
-    id: String(order?.id || order?.orderId || order?._id || fallback.id || ""),
-    date: formatOrderDate(order?.createdAt || order?.orderDate || order?.date || fallback.date),
+    id: String(order?.id || order?.orderId || order?._id || order?.order_id || fallback.id || ""),
+    date: formatOrderDate(order?.createdAt || order?.orderDate || order?.date || order?.created_at || order?.order_date || fallback.date),
     items: rawItems.length ? rawItems.map(mapApiOrderItemToLocal) : (fallback.items || []),
     total: Number.isFinite(total) ? total : Number(fallback.total || 0),
-    status: order?.status || order?.orderStatus || fallback.status || "Processing",
-    paymentMethod: order?.paymentMethod || order?.paymentType || fallback.paymentMethod || "Not Specified",
-    customerName: order?.customerName || order?.shippingAddress?.name || fallback.customerName || "Valued Member",
-    address: order?.deliveryAddress || order?.shippingAddress?.addressLine || order?.shippingAddress?.fullAddress || fallback.address,
-    phone: order?.phone || order?.shippingAddress?.phone || fallback.phone,
-    email: order?.email || fallback.email,
+    status: order?.status || order?.orderStatus || order?.order_status || order?.displayStatus || fallback.status || "Processing",
+    paymentMethod: order?.paymentMethod || order?.paymentType || order?.payment_method || order?.payment_mode || order?.payment_type || order?.method || order?.paymentMethodName || fallback.paymentMethod || "Not Specified",
+    customerName: order?.customerName || order?.customer?.name || order?.user?.name || order?.user?.full_name || order?.full_name || order?.name || order?.shippingAddress?.name || order?.customer_name || order?.user_name || order?.billingAddress?.name || fallback.customerName || "Valued Member",
+    address: order?.deliveryAddress || order?.shippingAddress?.addressLine || order?.shippingAddress?.fullAddress || order?.address || order?.location || fallback.address,
+    phone: order?.phone || order?.shippingAddress?.phone || order?.customer?.phone || order?.user?.phone || order?.contact || fallback.phone,
+    email: order?.email || order?.customer?.email || order?.user?.email || fallback.email,
   };
 }
 
@@ -572,8 +580,28 @@ function App() {
       try {
         const res = await getOrders(apiToken);
         const list = extractOrdersFromResponse(res?.data || {});
-        const mapped = list.map((order) => mapApiOrderToLocal(order));
-        setOrders(mapped);
+        // Merge API orders with locally-stored orders so that items, paymentMethod,
+        // and customerName (not returned by the API list endpoint) are preserved.
+        setOrders(prev => {
+          const localById = {};
+          prev.forEach(o => { if (o.id) localById[String(o.id)] = o; });
+          const merged = list.map(apiOrder => {
+            const apiId = String(apiOrder?.id || apiOrder?.orderId || apiOrder?._id || "");
+            const local = localById[apiId] || {};
+            const mapped = mapApiOrderToLocal(apiOrder, local);
+            // Always prefer local items/paymentMethod/customerName if API doesn't have them
+            return {
+              ...mapped,
+              items: (mapped.items && mapped.items.length > 0) ? mapped.items : (local.items || []),
+              paymentMethod: (mapped.paymentMethod && mapped.paymentMethod !== 'Not Specified') ? mapped.paymentMethod : (local.paymentMethod || 'Not Specified'),
+              customerName: (mapped.customerName && mapped.customerName !== 'Valued Member') ? mapped.customerName : (local.customerName || user?.name || 'Valued Member'),
+            };
+          });
+          // Also keep any local orders that aren't on the API (e.g. offline/failed sync)
+          const apiIds = new Set(merged.map(o => String(o.id)));
+          const localOnly = prev.filter(o => o.id && !apiIds.has(String(o.id)));
+          return [...merged, ...localOnly];
+        });
       } catch (err) {
         console.error("Fetch orders error:", err);
       }
@@ -976,6 +1004,14 @@ function App() {
         }];
       });
     };
+
+    // Redirect to sign in if not authenticated
+    if (!isAuthenticated) {
+      setIsSignIn(true);
+      setCurrentPage("auth");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     // If no auth token or variantId, use local cart only
     if (!apiToken) {
@@ -1402,7 +1438,9 @@ function App() {
       const raw = res?.data?.data?.order || res?.data?.order || res?.data?.data || res?.data;
 
       const fallbackOrderId = `#SV-${Math.floor(100000 + Math.random() * 900000)}`;
-      const mappedOrder = raw ? mapApiOrderToLocal(raw) : {
+      // Always build from a local fallback that preserves cart items + payment method,
+      // then overlay API fields. This ensures items/paymentMethod are never lost.
+      const localFallback = {
         id: fallbackOrderId,
         date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
         items: [...cart],
@@ -1410,8 +1448,9 @@ function App() {
         status: 'Processing',
         deliveryMethod,
         paymentMethod: methodLabel,
-        customerName: user?.name,
+        customerName: user?.name || 'Valued Member',
       };
+      const mappedOrder = raw ? { ...mapApiOrderToLocal(raw, localFallback), items: localFallback.items, paymentMethod: localFallback.paymentMethod, customerName: localFallback.customerName } : localFallback;
 
       const normalizedOrderId = mappedOrder?.id ? String(mappedOrder.id) : fallbackOrderId;
       setOrders(prev => [mappedOrder, ...prev]);
@@ -1772,6 +1811,7 @@ function App() {
           {currentPage === "myOrders" && (
             <MyOrders
               orders={orders}
+              user={user}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               onViewProduct={handleViewProduct}
               onTrackOrder={handleTrackOrder}
