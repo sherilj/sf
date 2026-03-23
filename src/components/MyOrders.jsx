@@ -1,5 +1,5 @@
 import React from "react";
-import { Package, Truck, ShoppingBag } from "lucide-react";
+import { Package, Truck, ShoppingBag, MapPin } from "lucide-react";
 
 const MyOrders = ({ orders, user, onContinueShopping, onViewProduct, onTrackOrder, onContactSupport }) => {
     if (orders.length === 0) {
@@ -41,6 +41,45 @@ const MyOrders = ({ orders, user, onContinueShopping, onViewProduct, onTrackOrde
                         : 'Not Specified';
 
                     const hasItems = Array.isArray(order.items) && order.items.length > 0;
+
+                    // Try to derive a human-friendly shipping address string
+                    const shippingAddressObj = order.shippingAddress || order.deliveryAddress;
+                    let shippingAddress =
+                        order.address ||
+                        order.deliveryAddress ||
+                        order.location ||
+                        (order.shippingAddress && (order.shippingAddress.addressLine || order.shippingAddress.fullAddress)) ||
+                        "";
+
+                    if (!shippingAddress && shippingAddressObj && typeof shippingAddressObj === 'object') {
+                        const {
+                            building_no,
+                            buildingNo,
+                            building_name,
+                            buildingName,
+                            street_no,
+                            streetNo,
+                            area_name,
+                            areaName,
+                            city,
+                            state,
+                            pincode,
+                            pinCode,
+                        } = shippingAddressObj;
+
+                        const parts = [
+                            building_no || buildingNo,
+                            building_name || buildingName,
+                            street_no || streetNo,
+                            area_name || areaName,
+                            city,
+                            state,
+                        ].filter(Boolean);
+
+                        const pin = pincode || pinCode;
+                        shippingAddress = parts.join(', ');
+                        if (pin) shippingAddress = shippingAddress ? `${shippingAddress} - ${pin}` : String(pin);
+                    }
 
                     return (
                         <div key={order.id} className="order-card" style={{
@@ -86,7 +125,53 @@ const MyOrders = ({ orders, user, onContinueShopping, onViewProduct, onTrackOrde
                             </div>
 
                             {/* Order Content */}
-                            <div className="order-content" style={{ padding: '24px' }}>
+                            <div className="order-content" style={{ padding: '6px 24px 24px' }}>
+                                {shippingAddress && (
+                                    <div
+                                        className="order-address"
+                                        style={{
+                                            display: 'flex',
+                                            gap: '10px',
+                                            alignItems: 'flex-start',
+                                            marginBottom: '20px',
+                                            padding: '14px 16px',
+                                            background: '#FEF8F0',
+                                            borderRadius: '10px',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: '999px',
+                                                background: '#F3E1DC',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <MapPin size={18} color="#7C3225" />
+                                        </div>
+                                        <div>
+                                            <div
+                                                style={{
+                                                    fontSize: '0.75rem',
+                                                    color: '#868889',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px',
+                                                    marginBottom: 4,
+                                                }}
+                                            >
+                                                Deliver to
+                                            </div>
+                                            <div style={{ color: '#4A4A4A', fontSize: '0.9rem', lineHeight: 1.45 }}>
+                                                {shippingAddress}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="order-status-bar" style={{
                                     display: 'flex',
                                     alignItems: 'center',

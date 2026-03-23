@@ -1484,6 +1484,25 @@ function App() {
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const total = subtotal + shippingCharge;
 
+    // Build a human-readable shipping address string for storing with the order
+    let shippingAddressText = "";
+    if (selectedAddress) {
+      const parts = [
+        selectedAddress.building_no,
+        selectedAddress.building_name,
+        selectedAddress.street_no,
+        selectedAddress.area_name,
+        selectedAddress.city,
+        selectedAddress.state,
+      ].filter(Boolean);
+      shippingAddressText = parts.join(', ');
+      if (selectedAddress.pincode) {
+        shippingAddressText = shippingAddressText
+          ? `${shippingAddressText} - ${selectedAddress.pincode}`
+          : String(selectedAddress.pincode);
+      }
+    }
+
     const items = cart.map((item, idx) => {
       const varId = item.variantId || item.id;
       return {
@@ -1507,6 +1526,7 @@ function App() {
         city: selectedAddress?.city,
         state: selectedAddress?.state,
         pincode: selectedAddress?.pincode,
+        addressLine: shippingAddressText || undefined,
       },
       customer: {
         name: user?.name || checkoutDetails.firstName || "Valued Member",
@@ -1543,6 +1563,9 @@ function App() {
         deliveryMethod,
         paymentMethod: methodLabel,
         customerName: user?.name || 'Valued Member',
+        // Persist a flattened address so My Orders can reliably show "Deliver to"
+        deliveryAddress: shippingAddressText || undefined,
+        address: shippingAddressText || undefined,
       };
       const mappedOrder = raw ? { ...mapApiOrderToLocal(raw, localFallback), items: localFallback.items, paymentMethod: localFallback.paymentMethod, customerName: localFallback.customerName } : localFallback;
 
