@@ -28,11 +28,27 @@ const DELIVERY_OPTIONS_MAP = {
 
 const formatCurrency = (value) => `₹${value.toLocaleString("en-IN")}`;
 
+const getDiscountFromCoupon = (coupon, subtotal) => {
+    if (!coupon) return 0;
+    const toNumber = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+    };
+    const directDiscount = toNumber(coupon.discountAmount);
+    if (directDiscount > 0) return Math.min(directDiscount, subtotal);
+
+    if (coupon.type === "percentage") {
+        return Math.min((subtotal * toNumber(coupon.discount)) / 100, subtotal);
+    }
+    return Math.min(toNumber(coupon.discount), subtotal);
+};
+
 const Payment = ({
     cart = [],
     details,
     selectedMethod = "standard",
     address,
+    appliedCoupon = null,
     onBack = () => { },
     onPlaceOrder = () => { },
 }) => {
@@ -43,8 +59,9 @@ const Payment = ({
         (sum, item) => sum + item.price * (item.quantity || 1),
         0
     );
+    const discount = getDiscountFromCoupon(appliedCoupon, subtotal);
     const shippingCost = selectedMethod === "express" ? 150 : 0;
-    const total = subtotal + shippingCost;
+    const total = subtotal - discount + shippingCost;
     const contactSummary = details?.email || "you@example.com";
     const shippingAddress = address
         ? `${address.building_no}, ${address.building_name}, ${address.street_no}, ${address.area_name}, ${address.city}, ${address.state} - ${address.pincode}`
@@ -257,6 +274,12 @@ const Payment = ({
                                 <span>Subtotal</span>
                                 <span>{formatCurrency(subtotal)}</span>
                             </div>
+                            {appliedCoupon && (
+                                <div className="flex justify-between" style={{ color: '#2E7D32' }}>
+                                    <span>Discount ({appliedCoupon.code})</span>
+                                    <span>-{formatCurrency(discount)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <span>Shipping</span>
                                 <span className="font-semibold text-[#1AA60B]">

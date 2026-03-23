@@ -151,6 +151,36 @@ export const verifyCoupon = (token, payload) => fetchJson(API_ENDPOINTS.VERIFY_C
 	body: JSON.stringify(payload),
 });
 
+// --- WISHLIST ---
+
+// Fetches all wishlist items for the logged-in user.
+export const getWishlist = (token) => fetchJson(API_ENDPOINTS.GET_WISHLIST, {
+	headers: authHeader(token),
+});
+
+// Adds a product to the user's wishlist.
+export const addWishlistItem = (token, productId) => fetchJson(API_ENDPOINTS.ADD_WISHLIST_ITEM(productId), {
+	method: "POST",
+	headers: authHeader(token),
+});
+
+// Removes a single product from the user's wishlist.
+export const removeWishlistItem = (token, productId) => fetchJson(API_ENDPOINTS.REMOVE_WISHLIST_ITEM(productId), {
+	method: "DELETE",
+	headers: authHeader(token),
+});
+
+// Clears the entire wishlist for the logged-in user.
+export const clearWishlist = (token) => fetchJson(API_ENDPOINTS.CLEAR_WISHLIST, {
+	method: "DELETE",
+	headers: authHeader(token),
+});
+
+// Checks if a specific product is present in the wishlist.
+export const checkWishlistItem = (token, productId) => fetchJson(API_ENDPOINTS.CHECK_WISHLIST_ITEM(productId), {
+	headers: authHeader(token),
+});
+
 // Fetches all orders for the logged-in user.
 export const getOrders = (token) => fetchJson(API_ENDPOINTS.GET_ORDERS, {
 	headers: authHeader(token),

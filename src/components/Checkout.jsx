@@ -24,6 +24,21 @@ const FALLBACK_ITEMS = [
 
 const formatCurrency = (value) => `₹${value.toLocaleString("en-IN")}`;
 
+const getDiscountFromCoupon = (coupon, subtotal) => {
+  if (!coupon) return 0;
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const directDiscount = toNumber(coupon.discountAmount);
+  if (directDiscount > 0) return Math.min(directDiscount, subtotal);
+
+  if (coupon.type === "percentage") {
+    return Math.min((subtotal * toNumber(coupon.discount)) / 100, subtotal);
+  }
+  return Math.min(toNumber(coupon.discount), subtotal);
+};
+
 const Checkout = ({
   cart = [],
   onBackToCart = () => { },
@@ -31,6 +46,7 @@ const Checkout = ({
   details = {},
   addresses = [],
   selectedAddressId = null,
+  appliedCoupon = null,
   onSelectAddress = () => { },
   onAddAddress = () => { },
   onUpdateAddress = () => { },
@@ -45,8 +61,9 @@ const Checkout = ({
     (sum, item) => sum + item.price * (item.quantity || 1),
     0
   );
+  const discount = getDiscountFromCoupon(appliedCoupon, subtotal);
   const shippingLabel = "Free";
-  const total = subtotal;
+  const total = subtotal - discount;
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -208,6 +225,12 @@ const Checkout = ({
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
+            {appliedCoupon && (
+              <div className="summary-row" style={{ color: '#2E7D32' }}>
+                <span>Discount ({appliedCoupon.code})</span>
+                <span>-{formatCurrency(discount)}</span>
+              </div>
+            )}
             <div className="summary-row">
               <span>Shipping</span>
               <span>{shippingLabel}</span>

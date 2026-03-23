@@ -62,6 +62,11 @@ import {
   updateUserProfile,
   getProducts,
   getCategories,
+  getWishlist,
+  addWishlistItem,
+  removeWishlistItem,
+  clearWishlist,
+  checkWishlistItem,
 } from "./api";
 
 // Helper: extract a single user object from any API response shape
@@ -197,6 +202,42 @@ function mapApiCartToLocal(apiCart) {
   });
 }
 
+function mapApiWishlistToLocal(apiData) {
+  if (!apiData) return [];
+
+  let raw = [];
+  if (Array.isArray(apiData)) raw = apiData;
+  else if (Array.isArray(apiData?.data)) raw = apiData.data;
+  else if (Array.isArray(apiData?.items)) raw = apiData.items;
+  else if (Array.isArray(apiData?.wishlistItems)) raw = apiData.wishlistItems;
+  else if (Array.isArray(apiData?.wishlist)) raw = apiData.wishlist;
+
+  return raw.map((entry) => {
+    const product = entry?.product || entry?.productDetails || entry?.product_detail || entry?.data || entry;
+
+    const id =
+      product?.id ||
+      product?.productId ||
+      product?.product_id ||
+      entry?.productId ||
+      entry?.product_id ||
+      "";
+
+    return {
+      id,
+      name: product?.name || product?.productName || product?.title || "Product",
+      category: product?.category || product?.categoryName || "",
+      price: Number(product?.price || product?.unitPrice || product?.mrp || 0),
+      img:
+        product?.imageUrl ||
+        product?.image ||
+        product?.img ||
+        (Array.isArray(product?.images) && product.images[0]?.imageUrl) ||
+        "/wild_honey.png",
+    };
+  });
+}
+
 function formatOrderDate(value) {
   if (!value) return "-";
   const parsed = new Date(value);
@@ -290,6 +331,7 @@ function App() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cart, setCart] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [checkoutDetails, setCheckoutDetails] = useState({
     email: "",
@@ -573,6 +615,26 @@ function App() {
     fetchCartData();
   }, [apiToken]);
 
+  // Sync wishlist from API on token change
+  useEffect(() => {
+    const fetchWishlistData = async () => {
+      if (!apiToken) {
+        setWishlist([]);
+        return;
+      }
+
+      try {
+        const res = await getWishlist(apiToken);
+        const mapped = mapApiWishlistToLocal(res?.data ?? res);
+        setWishlist(mapped);
+      } catch (err) {
+        console.error("❌ Fetch wishlist error:", err.message || err);
+      }
+    };
+
+    fetchWishlistData();
+  }, [apiToken]);
+
   // Sync orders from API on token change
   useEffect(() => {
     const fetchOrdersData = async () => {
@@ -785,6 +847,7 @@ function App() {
     setCart([]);
     if (apiToken) {
       clearCart(apiToken).catch(() => { });
+      clearWishlist(apiToken).catch(() => { });
     }
     setCurrentPage("auth");
   };
@@ -1123,13 +1186,44 @@ function App() {
   };
 
   const toggleWishlist = (product) => {
-    setWishlist(prev => {
-      if (prev.find(item => item.id === product.id)) {
-        return prev.filter(item => item.id !== product.id);
-      } else {
-        return [...prev, product];
+    const isAlreadyWishlisted = wishlist.some((item) => item.id === product.id);
+
+    // Local-only behaviour when not authenticated
+    if (!apiToken) {
+      setWishlist((prev) =>
+        isAlreadyWishlisted
+          ? prev.filter((item) => item.id !== product.id)
+          : [...prev, product]
+      );
+      return;
+    }
+
+    // Optimistic update
+    setWishlist((prev) =>
+      isAlreadyWishlisted
+        ? prev.filter((item) => item.id !== product.id)
+        : [...prev, product]
+    );
+
+    const productId = product.id;
+
+    (async () => {
+      try {
+        if (isAlreadyWishlisted) {
+          await removeWishlistItem(apiToken, productId);
+        } else {
+          await addWishlistItem(apiToken, productId);
+        }
+      } catch (err) {
+        console.error("Wishlist toggle error:", err);
+        // Revert optimistic update on failure
+        setWishlist((prev) =>
+          isAlreadyWishlisted
+            ? [...prev, product]
+            : prev.filter((item) => item.id !== product.id)
+        );
       }
-    });
+    })();
   };
 
   const handleDetailsChange = (field, value) => {
@@ -1460,6 +1554,7 @@ function App() {
         clearCart(apiToken).catch(() => { });
       }
       setCart([]);
+      setAppliedCoupon(null);
       setCurrentPage("orderConfirmation");
       window.scrollTo({ top: 0, behavior: "smooth" });
       setSaveSuccessMessage("Order placed successfully");
@@ -1806,6 +1901,7 @@ function App() {
               onRemove={toggleWishlist}
               onViewProduct={handleViewProduct}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onGoToCart={() => { setCurrentPage("cartPage"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             />
           )}
           {currentPage === "myOrders" && (
@@ -1851,6 +1947,8 @@ function App() {
               onUpdateQuantity={updateQuantity}
               onRemove={removeFromCart}
               onContinueShopping={() => { setCurrentPage("products"); setActiveCategory("All"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              appliedCoupon={appliedCoupon}
+              onApplyCoupon={setAppliedCoupon}
               onProceedToCheckout={goToCheckout}
             />
           )}
@@ -1862,6 +1960,7 @@ function App() {
               details={checkoutDetails}
               addresses={addresses}
               selectedAddressId={selectedAddressId}
+              appliedCoupon={appliedCoupon}
               onSelectAddress={setSelectedAddressId}
               onAddAddress={handleAddAddress}
               onUpdateAddress={handleUpdateAddress}
@@ -1879,6 +1978,7 @@ function App() {
               cart={cart}
               details={checkoutDetails}
               address={addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0]}
+              appliedCoupon={appliedCoupon}
               selectedMethod={deliveryMethod}
               onSelectMethod={setDeliveryMethod}
               onBack={() => {
@@ -1893,6 +1993,7 @@ function App() {
               cart={cart}
               details={checkoutDetails}
               address={addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0]}
+              appliedCoupon={appliedCoupon}
               selectedMethod={deliveryMethod}
               onBack={() => {
                 setCurrentPage("delivery");

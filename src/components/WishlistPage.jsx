@@ -1,12 +1,18 @@
 import React, { useState } from "react";
 import { Heart, ShoppingCart, Trash2, ArrowRight, ChevronLeft } from "lucide-react";
 
-const WishlistPage = ({ wishlist, onAddToCart, onRemove, onViewProduct, onContinueShopping }) => {
+const WishlistPage = ({ wishlist, onAddToCart, onRemove, onViewProduct, onContinueShopping, onGoToCart = () => {} }) => {
     const [addedIds, setAddedIds] = useState([]);
 
     const handleAddToCart = (product) => {
-        onAddToCart(product);
-        setAddedIds(prev => prev.includes(product.id) ? prev : [...prev, product.id]);
+        const alreadyAdded = addedIds.includes(product.id);
+
+        if (!alreadyAdded) {
+            onAddToCart(product);
+            setAddedIds(prev => prev.includes(product.id) ? prev : [...prev, product.id]);
+        } else {
+            onGoToCart();
+        }
     };
     if (wishlist.length === 0) {
         return (
@@ -95,9 +101,8 @@ const WishlistPage = ({ wishlist, onAddToCart, onRemove, onViewProduct, onContin
                                         className={`p-view-btn btn-product ${addedIds.includes(product.id) ? 'is-added' : ''}`}
                                         onClick={() => handleAddToCart(product)}
                                         style={{ display: 'flex', gap: '8px' }}
-                                        disabled={addedIds.includes(product.id)}
                                     >
-                                        <ShoppingCart size={16} /> {addedIds.includes(product.id) ? 'Added' : 'ADD'}
+                                        <ShoppingCart size={16} /> {addedIds.includes(product.id) ? 'VIEW CART' : 'ADD TO CART'}
                                     </button>
                                 </div>
                             </div>

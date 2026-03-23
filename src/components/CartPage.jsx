@@ -47,9 +47,8 @@ const getDiscountFromCoupon = (coupon, subtotal) => {
   return Math.min(toNumber(coupon.discount), subtotal);
 };
 
-const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShopping, onProceedToCheckout = () => { } }) => {
+const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShopping, appliedCoupon, onApplyCoupon = () => { }, onProceedToCheckout = () => { } }) => {
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState("");
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [isLoadingCoupons, setIsLoadingCoupons] = useState(false);
@@ -111,7 +110,7 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
 
       if (!valid) {
         setCouponError(details?.message || payload?.message || "Coupon is not valid for this order");
-        setAppliedCoupon(null);
+        onApplyCoupon(null);
         return;
       }
 
@@ -122,10 +121,10 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
         discountAmount: toNumber(details?.discountAmount ?? details?.discount_amount),
       };
 
-      setAppliedCoupon(verifiedCoupon);
+      onApplyCoupon(verifiedCoupon);
       setCouponError("");
     } catch (error) {
-      setAppliedCoupon(null);
+      onApplyCoupon(null);
       setCouponError(error?.response?.data?.message || error?.message || "Failed to verify coupon");
       return;
     } finally {
@@ -136,7 +135,7 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
   };
 
   const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
+    onApplyCoupon(null);
     setCouponCode("");
     setCouponError("");
   };
