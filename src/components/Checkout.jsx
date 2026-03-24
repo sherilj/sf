@@ -52,6 +52,7 @@ const Checkout = ({
   onUpdateAddress = () => { },
   onDeleteAddress = () => { },
   onDetailsChange = () => { },
+  onShowToast = null,
 }) => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
@@ -68,7 +69,11 @@ const Checkout = ({
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!selectedAddressId) {
-      alert("Please select or add a shipping address.");
+      if (onShowToast) {
+        onShowToast("Please select or add a shipping address.", "error");
+      } else {
+        alert("Please select or add a shipping address.");
+      }
       return;
     }
     onContinue();

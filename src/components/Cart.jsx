@@ -42,26 +42,36 @@ const Cart = ({ cart, onClose, onUpdateQuantity, onRemove }) => {
               <p className="cart-item-category">
                 {item.category} {item.selectedVariant && `(${item.selectedVariant})`}
               </p>
-              <p className="cart-item-price">₹{item.price}</p>
+              {item.availabilityStatus === 'OUT_OF_STOCK' ? (
+                <p className="cart-item-oos" style={{ color: '#7C3225', fontSize: '11px', fontWeight: 'bold' }}>OUT OF STOCK</p>
+              ) : (
+                <p className="cart-item-price">₹{item.price}</p>
+              )}
             </div>
             <div className="cart-item-quantity">
-              <button
-                className="quantity-btn"
-                onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
-                disabled={item.quantity <= 1}
-              >
-                <Minus size={16} />
-              </button>
-              <span className="quantity">{item.quantity}</span>
-              <button
-                className="quantity-btn"
-                onClick={() => onUpdateQuantity(item.cartItemId, item.quantity + 1)}
-              >
-                <Plus size={16} />
-              </button>
+              {!item.availabilityStatus || item.availabilityStatus !== 'OUT_OF_STOCK' ? (
+                <>
+                  <button
+                    className="quantity-btn"
+                    onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
+                    disabled={item.quantity <= 1}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="quantity">{item.quantity}</span>
+                  <button
+                    className="quantity-btn"
+                    onClick={() => onUpdateQuantity(item.cartItemId, item.quantity + 1)}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </>
+              ) : (
+                <span className="quantity-disabled" style={{ opacity: 0.5 }}>-</span>
+              )}
             </div>
             <div className="cart-item-total">
-              ₹{item.price * item.quantity}
+              {item.availabilityStatus === 'OUT_OF_STOCK' ? '-' : `₹${item.price * item.quantity}`}
             </div>
             <button className="remove-item-btn" onClick={() => onRemove(item.cartItemId)}>
               <X size={16} />

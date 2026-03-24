@@ -183,7 +183,7 @@ function mapApiCartToLocal(apiCart) {
   return items.map((item) => {
     const id = item.productId || item.product_id || item.id || item.variantId || item.variant_id;
     const variantId = item.variantId || item.variant_id || id;
-    const cartItemId = String(id || variantId || Date.now());
+    const cartItemId = String(variantId);
     
     const mapped = {
       id,
@@ -195,9 +195,11 @@ function mapApiCartToLocal(apiCart) {
       selectedVariant: item.variantName || item.variant || item.variant_name || "Standard",
       price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
       quantity: parseInt(item.quantity || item.qty || 1),
+      availabilityStatus: item.availabilityStatus || item.variant?.availabilityStatus || "IN_STOCK",
+      stockQuantity: item.stockQuantity || item.variant?.stockQuantity || 0,
     };
     
-    console.log("📦 Mapped item:", mapped.name, "qty:", mapped.quantity, "price:", mapped.price);
+    console.log("📦 Mapped item:", mapped.name, "qty:", mapped.quantity, "status:", mapped.availabilityStatus);
     return mapped;
   });
 }
@@ -391,7 +393,11 @@ function App() {
   });
   const [supportInitialOrder, setSupportInitialOrder] = useState(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "success" }), 3000);
+  };
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(["All"]);
 
@@ -714,7 +720,7 @@ function App() {
     // If saving from the new-user popup modal, navigate to home afterwards
     const isFromModal = showProfileModal;
     // show transient saving message
-    setSaveSuccessMessage("Saving profile...");
+    showToast("Saving profile...");
 
     // require an auth token set in-memory (via header button)
     const token = apiToken;
@@ -729,10 +735,9 @@ function App() {
         return updated;
       });
       setShowProfileModal(false);
-      setSaveSuccessMessage("Details saved");
+      showToast("Profile saved successfully! ✓");
       setCurrentPage("landing");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      setTimeout(() => setSaveSuccessMessage(""), 2500);
       return;
     }
 
@@ -766,15 +771,12 @@ function App() {
         return updated;
       });
       setShowProfileModal(false);
-
-      setSaveSuccessMessage("Details saved");
+      showToast("Profile updated successfully! 🎉");
       setCurrentPage("landing");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      setTimeout(() => setSaveSuccessMessage(""), 2500);
     } catch (err) {
-      setSaveSuccessMessage("");
       // show a simple error toast; keep modal open so user can retry
-      alert("Failed to update profile: " + (err.message || err));
+      showToast("Couldn't save your profile. Please check your details and try again.", "error");
       throw err; // rethrow so callers can handle
     }
   };
@@ -817,14 +819,12 @@ function App() {
     if (trimmed === "") {
       setApiTokenState(null);
       try { localStorage.removeItem("svasthya_token"); } catch (e) { }
-      setSaveSuccessMessage("API token removed");
-      setTimeout(() => setSaveSuccessMessage(""), 2000);
+      showToast("API token removed.");
       return;
     }
     setApiTokenState(trimmed);
     try { localStorage.setItem("svasthya_token", trimmed); } catch (e) { }
-    setSaveSuccessMessage("API token saved");
-    setTimeout(() => setSaveSuccessMessage(""), 2000);
+    showToast("API token saved. ✓");
   };
 
   const handleLogout = () => {
@@ -1027,32 +1027,32 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const addToCart = async (product, selectedVariant = null) => {
+  const addToCart = async (product, selectedVariant = null, quantity = 1) => {
     // Use the provided selectedVariant or the product's selectedVariant
-    const variant = selectedVariant || product.selectedVariant;
-    const variantLabel = variant?.variantName || variant?.name || 'Standard';
-    const variantId = variant?.id || variant?.variantId || variant?.variant_id || product?.variantId || product?.variant_id || product?.selectedVariant?.id || product?.selectedVariant?.variantId || product?.id;
-    const productId = product?.id || product?.productId;
+    const variant = selectedVariant || product.selectedVariant || (product.variants && product.variants[0]);
+    const variantLabel = variant?.variantName || variant?.name || variant?.label || 'Standard';
+    const variantId = String(variant?.id || variant?.variantId || variant?.variant_id || product?.id || product?.productId || "");
+    const productId = String(product?.id || product?.productId || "");
+    const cartItemId = variantId;
 
     console.log("Adding to cart:", { 
       productName: product.name,
       productId,
       variantId, 
       variantLabel,
-      price: selectedVariant?.price || product.price,
-      quantity: 1
+      price: variant?.price || product.price,
+      quantity
     });
 
     // Local optimistic behavior (kept as fallback)
     const applyLocalAdd = () => {
       setCart(prevCart => {
-        const cartItemId = `${product.id}-${variantLabel}`;
         const existingItem = prevCart.find(item => item.cartItemId === cartItemId);
         if (existingItem) {
-          console.log("Item exists, incrementing quantity");
+          console.log("Item exists, updating quantity by", quantity);
           return prevCart.map(item =>
             item.cartItemId === cartItemId
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantity: item.quantity + quantity }
               : item
           );
         }
@@ -1062,8 +1062,10 @@ function App() {
           variantId,
           cartItemId,
           selectedVariant: variantLabel,
-          price: selectedVariant?.price || product.price,
-          quantity: 1
+          price: variant?.price || product.price,
+          quantity: quantity,
+          availabilityStatus: variant?.availabilityStatus || "IN_STOCK",
+          stockQuantity: variant?.stockQuantity || product?.stockQuantity || 999,
         }];
       });
     };
@@ -1089,53 +1091,70 @@ function App() {
       return;
     }
 
+    // Apply locally first for instant UI feedback
+    applyLocalAdd();
+
     try {
       // Send minimal, clean payload
       const payload = {
         variantId: String(variantId),
-        quantity: 1,
+        quantity: quantity,
       };
       
       console.log("📤 CART ADD Request payload:", JSON.stringify(payload));
       const res = await addCartItem(apiToken, payload);
       console.log("✅ CART ADD Response status:", res?.status);
       console.log("✅ CART ADD Response data:", JSON.stringify(res?.data));
-      
-      // Fetch fresh cart from backend to verify items were saved
-      console.log("🔄 Fetching fresh cart to verify items were saved...");
+
+      // Only do a lightweight backend check to confirm save — don't overwrite local cart
       const cartRes = await getCart(apiToken);
       const cartData = cartRes.data?.cart || cartRes.data?.data || cartRes.data;
-      console.log("📦 Fresh cart from backend - Full response:", JSON.stringify(cartData, null, 2));
-      
-      if (cartData && Array.isArray(cartData?.items) && cartData.items.length > 0) {
-        const mapped = mapApiCartToLocal(cartData);
-        console.log(`✅ Items saved! Synced ${mapped.length} items from database`);
-        setCart(mapped);
-      } else if (cartData && Array.isArray(cartData?.cartItems) && cartData.cartItems.length > 0) {
-        const mapped = mapApiCartToLocal(cartData);
-        console.log(`✅ Items saved! Synced ${mapped.length} items from database`);
-        setCart(mapped);
+      const backendItems = cartData?.items || cartData?.cartItems || [];
+
+      if (backendItems.length === 0) {
+        console.error("⚠️  Backend cart is still empty after add — local state kept");
       } else {
-        console.error("⚠️  Backend cart is still empty - add to cart failed!");
-        console.log("Using local cart as fallback (items won't persist)");
-        applyLocalAdd();
+        console.log(`✅ Backend confirmed ${backendItems.length} item(s) in cart`);
+        // Merge backend data into local cart to pick up backend-assigned IDs/metadata,
+        // but PRESERVE local quantities which the user explicitly chose.
+        setCart(prevCart => {
+          const backendMapped = mapApiCartToLocal(cartData);
+          // For each backend item, if a local item already exists with the same cartItemId/variantId,
+          // keep the local quantity; otherwise add the backend item.
+          const merged = [...prevCart];
+          backendMapped.forEach(backendItem => {
+            const localIdx = merged.findIndex(l => l.cartItemId === backendItem.cartItemId || l.variantId === backendItem.variantId);
+            if (localIdx === -1) {
+              // Entirely new item from backend (edge case), add it
+              merged.push(backendItem);
+            }
+            // else: local item already exists with user's chosen quantity — keep it
+          });
+          return merged;
+        });
       }
     } catch (err) {
-      console.error("❌ Add to cart failed:", err.message);
+      console.error("❌ Add to cart API failed:", err.message);
       if (err?.response?.data) {
         console.error("❌ Backend error response:", JSON.stringify(err.response.data));
       }
-      // Still add to local cart as fallback
-      applyLocalAdd();
+      // Local state already updated by applyLocalAdd() above — no extra action needed
     }
   };
 
   const updateQuantity = async (cartItemId, newQuantity) => {
     const item = cart.find(i => i.cartItemId === cartItemId);
     const variantId = item?.variantId;
+    const maxStock = (item?.stockQuantity > 0) ? item.stockQuantity : 999;
 
     if (newQuantity <= 0) {
       removeFromCart(cartItemId);
+      return;
+    }
+
+    // Enforce stock cap
+    if (newQuantity > maxStock) {
+      showToast(`Out of stock! This product only has ${maxStock} units available. You cannot add more.`, "error");
       return;
     }
 
@@ -1234,7 +1253,7 @@ function App() {
     try {
       let finalAddress = { ...address };
       if (apiToken) {
-        setSaveSuccessMessage("Saving address...");
+        showToast("Saving address...");
         
         const payload = {
           addressType: address.type === 'Other' && address.other_type ? address.other_type : address.type,
@@ -1285,8 +1304,7 @@ function App() {
           is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
         };
         
-        setSaveSuccessMessage("Address saved successfully!");
-        setTimeout(() => setSaveSuccessMessage(""), 2000);
+        showToast("Address added successfully! ✓");
       } else {
         finalAddress.id = Date.now();
       }
@@ -1301,7 +1319,7 @@ function App() {
       setSelectedAddressId(finalAddress.id);
     } catch (err) {
       console.error(err);
-      alert("Failed to add address: " + err.message);
+      showToast("Couldn't save address. Please check your details and try again.", "error");
     }
   };
 
@@ -1309,7 +1327,7 @@ function App() {
     try {
       let finalAddress = { ...updatedAddress };
       if (apiToken) {
-        setSaveSuccessMessage("Updating address...");
+        showToast("Updating address...");
         // Handle MongoDB _id if present in updatedAddress.id
         const addressId = updatedAddress._id || updatedAddress.id;
         
@@ -1362,8 +1380,7 @@ function App() {
           pincode: apiAddress.pinCode || apiAddress.pincode || updatedAddress.pincode || "",
           is_default: apiAddress.isDefault === 1 || apiAddress.isDefault === true || apiAddress.is_default === true
         };
-        setSaveSuccessMessage("Address updated successfully!");
-        setTimeout(() => setSaveSuccessMessage(""), 2000);
+        showToast("Address updated successfully! ✓");
       } else {
         finalAddress.id = updatedAddress.id;
       }
@@ -1376,18 +1393,17 @@ function App() {
       }));
     } catch (err) {
       console.error(err);
-      alert("Failed to update address: " + err.message);
+      showToast("Couldn't update address. Please try again.", "error");
     }
   };
 
   const handleDeleteAddress = async (id) => {
     try {
       if (apiToken) {
-        setSaveSuccessMessage("Deleting address...");
+        showToast("Removing address...");
         const res = await removeAddress(apiToken, id);
         if (!res.ok) throw new Error("Failed to delete address");
-        setSaveSuccessMessage("Address deleted successfully!");
-        setTimeout(() => setSaveSuccessMessage(""), 2000);
+        showToast("Address removed successfully! ✓");
       }
 
       setAddresses(prev => prev.filter(a => a.id !== id));
@@ -1396,14 +1412,13 @@ function App() {
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to delete address: " + err.message);
+      showToast("Couldn't remove address. Please try again.", "error");
     }
   };
 
   const goToCheckout = () => {
     if (!cart || cart.length === 0) {
-      setSaveSuccessMessage("Your cart is empty. Add items to proceed to checkout.");
-      setTimeout(() => setSaveSuccessMessage(""), 3000);
+      showToast("Your cart is empty. Browse products and add items before checking out.", "error");
       return;
     }
     
@@ -1434,14 +1449,14 @@ function App() {
   const handlePlaceOrder = async (method) => {
     // Validate cart has items
     if (!cart || cart.length === 0) {
-      alert("Your cart is empty. Please add items before placing an order.");
+      showToast("Your cart is empty. Please add at least one item before placing an order.", "error");
       return;
     }
 
     const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses.find(a => a.is_default) || addresses[0];
     
     if (!selectedAddress) {
-      alert("Please select or add a delivery address.");
+      showToast("No delivery address found. Please add a shipping address before continuing.", "error");
       return;
     }
 
@@ -1476,7 +1491,7 @@ function App() {
 
     if (backendItemsCount === 0) {
       console.error("❌ CRITICAL: Backend cart is empty!");
-      alert("Your items are not saved in the database. Please add items again and wait for confirmation.");
+      showToast("Your cart items couldn't be verified. Please re-add items to your cart and try again.", "error");
       return;
     }
 
@@ -1545,7 +1560,7 @@ function App() {
     console.log("=======================");
 
     try {
-      setSaveSuccessMessage("Placing order...");
+      showToast("Placing your order...");
       const res = await createCheckout(apiToken, payload);
       console.log("✅ Checkout success:", res?.data);
       
@@ -1580,14 +1595,24 @@ function App() {
       setAppliedCoupon(null);
       setCurrentPage("orderConfirmation");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      setSaveSuccessMessage("Order placed successfully");
-      setTimeout(() => setSaveSuccessMessage(""), 2000);
+      showToast("Order placed successfully");
     } catch (err) {
       console.error("❌ Checkout error:", err.message);
       console.error("❌ Backend response:", err?.response?.data);
-      setSaveSuccessMessage("");
-      const errorMsg = err?.response?.data?.message || err?.message || "Failed to place order. Please try again.";
-      alert(errorMsg);
+      const backendMsg = (err?.response?.data?.message || err?.message || "").toLowerCase();
+      let userMsg;
+      if (backendMsg.includes("stock") || backendMsg.includes("quantity") || backendMsg.includes("insufficient") || backendMsg.includes("available")) {
+        userMsg = "One or more items in your cart exceed the available stock. Please reduce the quantity and try again.";
+      } else if (backendMsg.includes("not found") || backendMsg.includes("product")) {
+        userMsg = "A product in your cart is no longer available. Please remove it and try again.";
+      } else if (backendMsg.includes("address")) {
+        userMsg = "There's an issue with your delivery address. Please verify it and try again.";
+      } else if (backendMsg.includes("payment")) {
+        userMsg = "Payment method is invalid. Please go back and select a valid payment method.";
+      } else {
+        userMsg = "Couldn't place your order. Please try again or contact support if the issue persists.";
+      }
+      showToast(userMsg, "error");
     }
   };
 
@@ -1622,8 +1647,25 @@ function App() {
 
   return (
     <div className="app-container">
-      {saveSuccessMessage && (
-        <div className="fixed top-6 right-6 z-60 bg-emerald-600 text-white px-4 py-2 rounded-md shadow">{saveSuccessMessage}</div>
+      {toast.message && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 9999,
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: '10px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+          fontWeight: '500',
+          fontSize: '14px',
+          maxWidth: '380px',
+          lineHeight: '1.5',
+          backgroundColor: toast.type === 'error' ? '#C0392B' : '#1AA60B',
+          animation: 'slideInRight 0.3s ease',
+        }}>
+          {toast.type === 'error' ? '⚠ ' : '✓ '}{toast.message}
+        </div>
       )}
       <header className="header">
         <div className="header-inner">
@@ -1915,6 +1957,7 @@ function App() {
               onAddToCart={addToCart}
               onGoToCart={() => { setCurrentPage("cartPage"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               onToggleWishlist={toggleWishlist}
+              onShowToast={showToast}
             />
           )}
           {currentPage === "wishlist" && (
@@ -1973,10 +2016,11 @@ function App() {
               appliedCoupon={appliedCoupon}
               onApplyCoupon={setAppliedCoupon}
               onProceedToCheckout={goToCheckout}
+              onShowToast={showToast}
             />
           )}
           {currentPage === "ourStory" && <OurStory />}
-          {currentPage === "contact" && <Contact />}
+          {currentPage === "contact" && <Contact onShowToast={showToast} />}
           {currentPage === "checkout" && (
             <Checkout
               cart={cart}
@@ -1994,6 +2038,7 @@ function App() {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               onContinue={goToDelivery}
+              onShowToast={showToast}
             />
           )}
           {currentPage === "delivery" && (

@@ -24,7 +24,7 @@ const CheckCircle = ({ size, color }) => (
     </svg>
 );
 
-const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist }) => {
+const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist, onShowToast }) => {
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
 
@@ -368,23 +368,38 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
                             <span className="qty-val">{quantity}</span>
                             <button
                                 onClick={() => {
+                                    const maxStock = selectedVariant?.stockQuantity ?? 999;
+                                    if (quantity >= maxStock) {
+                                        if (onShowToast) onShowToast(`Out of stock! Only ${maxStock} units of this product are available.`, "error");
+                                        return;
+                                    }
                                     setQuantity(quantity + 1);
                                 }}
                                 className="qty-btn"
+                                disabled={quantity >= (selectedVariant?.stockQuantity ?? 999)}
+                                style={quantity >= (selectedVariant?.stockQuantity ?? 999) ? { opacity: 0.35, cursor: 'not-allowed' } : {}}
                             >
                                 <Plus size={16} />
                             </button>
                         </div>
                         <button
-                            className={`pd-add-to-cart ${isAdded ? 'added' : ''}`}
+                            className={`pd-add-to-cart ${isAdded ? 'added' : ''} ${selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? 'out-of-stock' : ''}`}
                             onClick={() => {
+                                if (selectedVariant.availabilityStatus === 'OUT_OF_STOCK') return;
+                                const maxStock = selectedVariant?.stockQuantity ?? 999;
+                                if (quantity > maxStock) {
+                                    if (onShowToast) onShowToast(`Can't add to cart — only ${maxStock} units available. Please reduce the quantity.`, "error");
+                                    return;
+                                }
                                 if (onAddToCart) {
-                                    for (let i = 0; i < quantity; i++) onAddToCart(product, selectedVariant);
+                                    onAddToCart(product, selectedVariant, quantity);
                                     setIsAdded(true);
                                 }
                             }}
+                            disabled={selectedVariant.availabilityStatus === 'OUT_OF_STOCK'}
+                            style={selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? { backgroundColor: '#888', cursor: 'not-allowed' } : {}}
                         >
-                            {isAdded ? "ADDED TO CART" : "ADD TO CART"} {isAdded ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
+                            {selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? "OUT OF STOCK" : (isAdded ? "ADDED TO CART" : "ADD TO CART")} {isAdded ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
                         </button>
 
                     </div>

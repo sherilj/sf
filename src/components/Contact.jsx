@@ -17,7 +17,7 @@ const ImageWithLoader = ({ src, alt, className }) => {
   );
 };
 
-const Contact = () => {
+const Contact = ({ onShowToast }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -36,7 +36,11 @@ const Contact = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission logic here
-    alert("Thank you for your message! We will get back to you soon.");
+    if (onShowToast) {
+      onShowToast("Thank you for your message! We will get back to you soon.");
+    } else {
+      alert("Thank you for your message! We will get back to you soon.");
+    }
     setFormData({ firstName: "", lastName: "", email: "", subject: "", message: "" });
   };
 

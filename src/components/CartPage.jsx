@@ -47,7 +47,7 @@ const getDiscountFromCoupon = (coupon, subtotal) => {
   return Math.min(toNumber(coupon.discount), subtotal);
 };
 
-const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShopping, appliedCoupon, onApplyCoupon = () => { }, onProceedToCheckout = () => { } }) => {
+const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShopping, appliedCoupon, onApplyCoupon = () => { }, onProceedToCheckout = () => { }, onShowToast }) => {
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
   const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -204,9 +204,10 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
                 const fallbackMrp = Math.round(itemPrice * 1.2);
                 const itemMrp = providedMrp > 0 ? providedMrp : fallbackMrp;
                 const showStrikedPrice = itemMrp > itemPrice;
+                const isOutOfStock = item.availabilityStatus === "OUT_OF_STOCK";
 
                 return (
-                <div key={item.cartItemId} className="cp-item">
+                <div key={item.cartItemId} className={`cp-item ${isOutOfStock ? 'oos-item' : ''}`}>
                   <div className="cp-item-img">
                     <img src={item.img} alt={item.name} />
                   </div>
@@ -218,30 +219,45 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
                         <span className="cp-item-variant">Quantity: {item.selectedVariant}</span>
                       )}
                     </div>
-                    <div className="cp-item-price-row">
-                      <p className="cp-item-price">₹{item.price}</p>
-                      {showStrikedPrice && <p className="cp-item-mrp">₹{Math.round(itemMrp)}</p>}
-                    </div>
+                    {isOutOfStock ? (
+                      <p className="cp-item-oos-message">Sorry, this item is currently out of stock.</p>
+                    ) : (
+                      <div className="cp-item-price-row">
+                        <p className="cp-item-price">₹{item.price}</p>
+                        {showStrikedPrice && <p className="cp-item-mrp">₹{Math.round(itemMrp)}</p>}
+                      </div>
+                    )}
                   </div>
                   <div className="cp-item-right">
                     <button className="cp-remove-btn" onClick={() => onRemove(item.cartItemId)}>
                       <X size={13} /> REMOVE
                     </button>
-                    <div className="cp-qty-row">
-                      <button
-                        className="cp-qty-btn"
-                        onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="cp-qty-val">{item.quantity}</span>
-                      <button
-                        className="cp-qty-btn"
-                        onClick={() => onUpdateQuantity(item.cartItemId, item.quantity + 1)}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
+                    {!isOutOfStock && (
+                      <div className="cp-qty-row">
+                        <button
+                          className="cp-qty-btn"
+                          onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className="cp-qty-val">{item.quantity}</span>
+                        <button
+                          className="cp-qty-btn"
+                          onClick={() => {
+                            const maxStock = (item.stockQuantity > 0) ? item.stockQuantity : 999;
+                            if (item.quantity >= maxStock) {
+                              if (onShowToast) onShowToast(`Can't increase quantity — only ${maxStock} units available for this product.`, "error");
+                              return;
+                            }
+                            onUpdateQuantity(item.cartItemId, item.quantity + 1);
+                          }}
+                          disabled={item.stockQuantity > 0 && item.quantity >= item.stockQuantity}
+                          style={item.stockQuantity > 0 && item.quantity >= item.stockQuantity ? { opacity: 0.35, cursor: 'not-allowed' } : {}}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 );
@@ -340,7 +356,17 @@ const CartPage = ({ cart, apiToken, onUpdateQuantity, onRemove, onContinueShoppi
                 <span>Order Total</span>
                 <span>₹{(finalSubtotal + shipping).toFixed(0)}</span>
               </div>
-              <button className="cp-checkout-btn" onClick={onProceedToCheckout}>
+              {cart.some(item => item.availabilityStatus === "OUT_OF_STOCK") && (
+                <p className="cp-oos-overall-warning" style={{ color: '#7C3225', fontSize: '13px', marginBottom: '10px', textAlign: 'center', fontWeight: '500' }}>
+                  Please remove out of stock items to proceed.
+                </p>
+              )}
+              <button 
+                className={`cp-checkout-btn ${cart.some(item => item.availabilityStatus === "OUT_OF_STOCK") ? 'disabled' : ''}`} 
+                onClick={onProceedToCheckout}
+                disabled={cart.some(item => item.availabilityStatus === "OUT_OF_STOCK")}
+                style={cart.some(item => item.availabilityStatus === "OUT_OF_STOCK") ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+              >
                 PROCEED TO CHECKOUT <ArrowRight size={16} />
               </button>
               <div className="cp-trust-badges">

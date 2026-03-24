@@ -78,7 +78,11 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
                         <span className="p-mrp">₹{Math.round(product.mrp || product.price * 1.2)}</span>
                         <span className="p-price">₹{product.price}</span>
                       </div>
-                      {product.selectedVariant?.stockQuantity <= 10 && (
+                      {product.selectedVariant?.availabilityStatus === 'OUT_OF_STOCK' ? (
+                        <div className="p-stock-error" style={{ color: '#7C3225', fontWeight: 'bold' }}>
+                          <small>Out of Stock</small>
+                        </div>
+                      ) : product.selectedVariant?.stockQuantity <= 10 && (
                         <div className="p-stock-warning">
                           <small>Only {product.selectedVariant.stockQuantity} left!</small>
                         </div>
