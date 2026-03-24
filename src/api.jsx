@@ -132,6 +132,12 @@ export const verifyOtp = (payload) => fetchJson(API_ENDPOINTS.VERIFY_OTP, {
 	body: JSON.stringify(payload),
 });
 
+// Logs out the current user by invalidating their session/token on the backend.
+export const logoutUser = (token) => fetchJson(API_ENDPOINTS.LOGOUT, {
+	method: "POST",
+	headers: authHeader(token),
+});
+
 // Creates an order using checkout flow.
 export const createCheckout = (token, payload) => fetchJson(API_ENDPOINTS.CREATE_CHECKOUT, {
 	method: "POST",

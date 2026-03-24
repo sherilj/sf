@@ -67,6 +67,7 @@ import {
   removeWishlistItem,
   clearWishlist,
   checkWishlistItem,
+  logoutUser,
 } from "./api";
 
 // Helper: extract a single user object from any API response shape
@@ -559,6 +560,21 @@ function App() {
             };
           });
           setProducts(normalizedProducts);
+
+          // If we were on a product details page before reload, restore that product
+          try {
+            const savedPage = localStorage.getItem("svasthya_current_page");
+            if (savedPage === "details") {
+              const raw = localStorage.getItem("svasthya_selected_product");
+              if (raw) {
+                const savedProduct = JSON.parse(raw);
+                const restored = normalizedProducts.find(p => String(p.id) === String(savedProduct.id));
+                setSelectedProduct(restored || savedProduct || null);
+              }
+            }
+          } catch (e) {
+            // ignore localStorage issues
+          }
         }
 
         if (catRes.data) {
@@ -827,7 +843,17 @@ function App() {
     showToast("API token saved. ✓");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = apiToken;
+
+    if (token) {
+      try {
+        await logoutUser(token);
+      } catch (err) {
+        console.error("Logout API error:", err);
+      }
+    }
+
     // Clear all user-specific data from localStorage
     localStorage.removeItem("svasthya_user");
     localStorage.removeItem("svasthya_token");
@@ -845,9 +871,9 @@ function App() {
     setWishlist([]);
     setSelectedAddressId(null);
     setCart([]);
-    if (apiToken) {
-      clearCart(apiToken).catch(() => { });
-      clearWishlist(apiToken).catch(() => { });
+    if (token) {
+      clearCart(token).catch(() => { });
+      clearWishlist(token).catch(() => { });
     }
     setCurrentPage("auth");
   };
@@ -1023,6 +1049,11 @@ function App() {
 
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
+    try {
+      localStorage.setItem("svasthya_selected_product", JSON.stringify(product));
+    } catch (e) {
+      // ignore storage errors
+    }
     setCurrentPage("details");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1764,7 +1795,7 @@ function App() {
                   />
                   {searchQuery.length > 0 && (
                     <div className="search-suggestions">
-                      {ALL_PRODUCTS.filter(p =>
+                      {products.filter(p =>
                         p.name.toLowerCase().includes(searchQuery.toLowerCase())
                       ).slice(0, 5).map(product => (
                         <div
@@ -1783,7 +1814,7 @@ function App() {
                           </div>
                         </div>
                       ))}
-                      {ALL_PRODUCTS.filter(p =>
+                      {products.filter(p =>
                         p.name.toLowerCase().includes(searchQuery.toLowerCase())
                       ).length === 0 && (
                           <div className="no-suggestions">No products found</div>

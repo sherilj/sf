@@ -180,6 +180,26 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
     const variants = getVariants();
     const [selectedVariant, setSelectedVariant] = useState(variants[0]);
 
+    // How many units of the selected variant are already in the cart
+    const selectedVariantId = selectedVariant?.variantId || selectedVariant?.id || selectedVariant?.label;
+    const inCartQuantity = Array.isArray(cart)
+        ? cart
+            .filter((item) => {
+                const itemVariantId = item.variantId || item.id || item.cartItemId;
+                return String(itemVariantId) === String(selectedVariantId);
+            })
+            .reduce((sum, item) => sum + (item.quantity || 0), 0)
+        : 0;
+
+    const rawStockQty = typeof selectedVariant?.stockQuantity === "number" ? selectedVariant.stockQuantity : null;
+    const hasFiniteStock = rawStockQty !== null && rawStockQty > 0;
+    const totalStock = hasFiniteStock ? rawStockQty : null;
+    const remainingStockForAdd = hasFiniteStock ? Math.max(totalStock - inCartQuantity, 0) : null;
+    const hasReachedMax = hasFiniteStock && remainingStockForAdd === 0;
+    const effectiveAvailability = (rawStockQty !== null && rawStockQty <= 0)
+        ? 'OUT_OF_STOCK'
+        : selectedVariant.availabilityStatus;
+
     const getTabContent = () => {
         switch (activeTab) {
             case "features":
@@ -314,12 +334,12 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
                     
                     {/* Stock Information */}
                     <div className="pd-stock-info">
-                        {selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? (
+                        {effectiveAvailability === 'OUT_OF_STOCK' ? (
                             <span className="pd-out-of-stock">Out of Stock</span>
-                        ) : selectedVariant.availabilityStatus === 'LOW_STOCK' ? (
-                            <span className="pd-low-stock">Only {selectedVariant.stockQuantity} left!</span>
+                        ) : effectiveAvailability === 'LOW_STOCK' && rawStockQty !== null ? (
+                            <span className="pd-low-stock">Only {rawStockQty} left!</span>
                         ) : (
-                            <span className="pd-in-stock">In Stock ({selectedVariant.stockQuantity} available)</span>
+                            <span className="pd-in-stock">In Stock ({rawStockQty ?? '—'} available)</span>
                         )}
                     </div>
 
@@ -368,40 +388,47 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
                             <span className="qty-val">{quantity}</span>
                             <button
                                 onClick={() => {
-                                    const maxStock = selectedVariant?.stockQuantity ?? 999;
-                                    if (quantity >= maxStock) {
-                                        if (onShowToast) onShowToast(`Out of stock! Only ${maxStock} units of this product are available.`, "error");
-                                        return;
+                                    if (effectiveAvailability === 'OUT_OF_STOCK') return;
+                                    if (hasFiniteStock) {
+                                        const maxAdditional = remainingStockForAdd;
+                                        if (!maxAdditional || quantity >= maxAdditional) {
+                                            return;
+                                        }
                                     }
                                     setQuantity(quantity + 1);
                                 }}
                                 className="qty-btn"
-                                disabled={quantity >= (selectedVariant?.stockQuantity ?? 999)}
-                                style={quantity >= (selectedVariant?.stockQuantity ?? 999) ? { opacity: 0.35, cursor: 'not-allowed' } : {}}
+                                disabled={effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && (hasReachedMax || quantity >= (remainingStockForAdd || 0)))}
+                                style={(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && (hasReachedMax || quantity >= (remainingStockForAdd || 0)))) ? { opacity: 0.35, cursor: 'not-allowed' } : {}}
                             >
                                 <Plus size={16} />
                             </button>
                         </div>
                         <button
-                            className={`pd-add-to-cart ${isAdded ? 'added' : ''} ${selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? 'out-of-stock' : ''}`}
+                            className={`pd-add-to-cart ${isAdded ? 'added' : ''} ${(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && hasReachedMax)) ? 'out-of-stock' : ''}`}
                             onClick={() => {
-                                if (selectedVariant.availabilityStatus === 'OUT_OF_STOCK') return;
-                                const maxStock = selectedVariant?.stockQuantity ?? 999;
-                                if (quantity > maxStock) {
-                                    if (onShowToast) onShowToast(`Can't add to cart — only ${maxStock} units available. Please reduce the quantity.`, "error");
-                                    return;
+                                if (effectiveAvailability === 'OUT_OF_STOCK') return;
+                                if (hasFiniteStock) {
+                                    if (hasReachedMax) {
+                                        return;
+                                    }
+                                    if (remainingStockForAdd !== null && quantity > remainingStockForAdd) {
+                                        if (onShowToast) onShowToast(`You already have ${inCartQuantity} in your cart. Only ${remainingStockForAdd} more can be added.`, "error");
+                                        return;
+                                    }
                                 }
                                 if (onAddToCart) {
                                     onAddToCart(product, selectedVariant, quantity);
                                     setIsAdded(true);
                                 }
                             }}
-                            disabled={selectedVariant.availabilityStatus === 'OUT_OF_STOCK'}
-                            style={selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? { backgroundColor: '#888', cursor: 'not-allowed' } : {}}
+                            disabled={effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && hasReachedMax)}
+                            style={(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && hasReachedMax)) ? { backgroundColor: '#888', cursor: 'not-allowed' } : {}}
                         >
-                            {selectedVariant.availabilityStatus === 'OUT_OF_STOCK' ? "OUT OF STOCK" : (isAdded ? "ADDED TO CART" : "ADD TO CART")} {isAdded ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
+                            {(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && hasReachedMax))
+                                ? "OUT OF STOCK"
+                                : (isAdded ? "ADDED TO CART" : "ADD TO CART")} {isAdded && !(hasFiniteStock && hasReachedMax) ? <CheckCircle size={18} color="#FFF" /> : <ChevronRight size={18} />}
                         </button>
-
                     </div>
 
                     <div className="pd-delivery-status">
