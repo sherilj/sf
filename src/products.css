@@ -193,6 +193,21 @@
     object-fit: cover;
 }
 
+.p-out-of-stock-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(124, 50, 37, 0.95);
+    color: #ffffff;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .p-badge {
     position: absolute;
     top: 15px;

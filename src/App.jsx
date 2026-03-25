@@ -43,6 +43,7 @@ import AuthPage from "./components/AuthPage";
 import MyOrders from "./components/MyOrders";
 import SupportCenter from "./components/SupportCenter";
 import OrderTracking from "./components/OrderTracking";
+import BannerCarousel from "./components/BannerCarousel";
 import {
   addCartItem,
   clearCart,
@@ -1889,6 +1890,9 @@ function App() {
           </div>
         </div>
       </header>
+
+      {/* Dynamic banner carousel immediately below the header (home page) */}
+      {currentPage === "landing" && <BannerCarousel />}
 
       {/* Mobile Nav Overlay */}
       {isMobileMenuOpen && (

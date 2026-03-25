@@ -208,3 +208,6 @@ export const getProducts = () => fetchJson(API_ENDPOINTS.GET_PRODUCTS);
 
 // Fetches a specific product.
 export const getProduct = (id) => fetchJson(API_ENDPOINTS.GET_PRODUCT(id));
+
+// Fetches active banners for the home page.
+export const getActiveBanners = () => fetchJson(API_ENDPOINTS.GET_ACTIVE_BANNERS);

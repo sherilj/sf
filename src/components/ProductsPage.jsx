@@ -6,6 +6,35 @@ import { Search, Star, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 
 const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, searchQuery, setSearchQuery, wishlist, onToggleWishlist, products = [], categories = ["All"], onAddToCart }) => {
 
+  // Determine if a product should be treated as completely out of stock
+  const isProductOutOfStock = (product) => {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+
+    const isVariantAvailable = (v) => {
+      const qty = typeof v.stockQuantity === "number" ? v.stockQuantity : null;
+      if (v.availabilityStatus === "OUT_OF_STOCK") return false;
+      if (qty !== null && qty <= 0) return false;
+      return true;
+    };
+
+    if (variants.length > 0) {
+      // Only mark product as out of stock if *all* variants are unavailable
+      return !variants.some(isVariantAvailable);
+    }
+
+    const v = product.selectedVariant || {};
+    const qty = typeof v.stockQuantity === "number" ? v.stockQuantity : null;
+
+    if (v.availabilityStatus === "OUT_OF_STOCK") return true;
+    if (qty !== null && qty <= 0) return true;
+
+    const productQty = typeof product.stockQuantity === "number" ? product.stockQuantity : null;
+    if (product.availabilityStatus === "OUT_OF_STOCK") return true;
+    if (productQty !== null && productQty <= 0) return true;
+
+    return false;
+  };
+
   const groupedProducts = categories.filter(c => c !== "All").reduce((acc, cat) => {
     const filtered = products.filter(p => (p.category === cat || (p.category?.name === cat)) && p.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     if (filtered.length > 0) acc[cat] = filtered;
@@ -60,6 +89,11 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
                       color={wishlist?.some(item => item.id === product.id) ? "#7C3225" : "#4A4A4A"}
                     />
                   </button>
+                  {isProductOutOfStock(product) && (
+                    <div className="p-out-of-stock-label">
+                      Out of Stock
+                    </div>
+                  )}
                 </div>
                 <div className="p-card-info">
                   <div className="p-card-meta">
@@ -78,11 +112,7 @@ const ProductsPage = ({ activeCategory, setActiveCategory, onViewProduct, search
                         <span className="p-mrp">₹{Math.round(product.mrp || product.price * 1.2)}</span>
                         <span className="p-price">₹{product.price}</span>
                       </div>
-                      {(product.selectedVariant?.availabilityStatus === 'OUT_OF_STOCK' || product.selectedVariant?.stockQuantity === 0) ? (
-                        <div className="p-stock-error" style={{ color: '#7C3225', fontWeight: 'bold' }}>
-                          <small>Out of Stock</small>
-                        </div>
-                      ) : (product.selectedVariant?.stockQuantity > 0 && product.selectedVariant?.stockQuantity <= 10) && (
+                      {(!isProductOutOfStock(product) && product.selectedVariant?.stockQuantity > 0 && product.selectedVariant?.stockQuantity <= 10) && (
                         <div className="p-stock-warning">
                           <small>Only {product.selectedVariant.stockQuantity} left!</small>
                         </div>

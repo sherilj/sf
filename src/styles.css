@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg-color: #FDF9F1;
   /* Changed from #FFFFFF to prevent white flash */
   /* Page outer background */
@@ -1323,7 +1323,7 @@ img {
 .hero-section {
   padding-top: 0;
   padding-bottom: 0;
-  margin-top: -130px;
+  margin-top: -280px;
   margin-bottom: 0;
 }
 
@@ -1333,12 +1333,12 @@ img {
   margin-left: auto;
   margin-right: auto;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .hero-content {
   position: absolute;
-  top: 15%;
+  top: 5%;
   left: 0;
   right: 0;
   text-align: center;
@@ -2436,7 +2436,7 @@ main.main-content.has-landing {
   }
 
   .hero-section {
-    margin-top: -80px;
+    margin-top: -180px;
   }
 
   .title-divider {
@@ -4435,7 +4435,7 @@ main.main-content.has-landing {
 
   /* Hero section — Restore original negative margin */
   .hero-section {
-    margin-top: -80px;
+    margin-top: -180px;
   }
 
   /* Essentials section — adjust negative margin for tablet */
@@ -4545,9 +4545,8 @@ main.main-content.has-landing {
     gap: 10px;
   }
 
-  /* Hero section — much less negative margin on small phones */
   .hero-section {
-    margin-top: -50px;
+    margin-top: -120px;
   }
 
   .hero-title {
@@ -4555,7 +4554,7 @@ main.main-content.has-landing {
   }
 
   .hero-content {
-    top: 10%;
+    top: 5%;
   }
 
   /* Essentials */

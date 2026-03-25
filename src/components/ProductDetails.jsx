@@ -25,7 +25,6 @@ const CheckCircle = ({ size, color }) => (
 );
 
 const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onViewProduct, onAddToCart, onGoToCart, onToggleWishlist, onShowToast }) => {
-    const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState("description");
 
     if (!product) return null;
@@ -178,7 +177,29 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
     };
 
     const variants = getVariants();
-    const [selectedVariant, setSelectedVariant] = useState(variants[0]);
+
+    const findInitialVariant = (variantList) => {
+        if (!Array.isArray(variantList) || variantList.length === 0) return null;
+
+        const available = variantList.find((v) => {
+            const qty = typeof v.stockQuantity === "number" ? v.stockQuantity : null;
+            if (v.availabilityStatus === "OUT_OF_STOCK") return false;
+            if (qty !== null && qty <= 0) return false;
+            return true;
+        });
+
+        return available || variantList[0];
+    };
+
+    const [selectedVariant, setSelectedVariant] = useState(() => findInitialVariant(variants));
+
+    // When navigating to a new product, auto-select an available variant if possible
+    React.useEffect(() => {
+        const initial = findInitialVariant(variants);
+        if (initial) {
+            setSelectedVariant(initial);
+        }
+    }, [product]);
 
     // How many units of the selected variant are already in the cart
     const selectedVariantId = selectedVariant?.variantId || selectedVariant?.id || selectedVariant?.label;
@@ -372,53 +393,15 @@ const ProductDetails = ({ product, products = [], cart, wishlist, onBack, onView
                     </p>
 
                     <div className="pd-buy-block">
-                        <div className="pd-quantity-selector">
-                            <button
-                                onClick={() => {
-                                    if (quantity > 1) {
-                                        setQuantity(quantity - 1);
-                                    }
-                                }}
-                                className="qty-btn"
-                                disabled={quantity <= 1}
-                                style={quantity <= 1 ? { opacity: 0.35, cursor: 'not-allowed' } : { }}
-                            >
-                                <Minus size={16} />
-                            </button>
-                            <span className="qty-val">{quantity}</span>
-                            <button
-                                onClick={() => {
-                                    if (effectiveAvailability === 'OUT_OF_STOCK') return;
-                                    if (hasFiniteStock) {
-                                        const maxAdditional = remainingStockForAdd;
-                                        if (!maxAdditional || quantity >= maxAdditional) {
-                                            return;
-                                        }
-                                    }
-                                    setQuantity(quantity + 1);
-                                }}
-                                className="qty-btn"
-                                disabled={effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && (hasReachedMax || quantity >= (remainingStockForAdd || 0)))}
-                                style={(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && (hasReachedMax || quantity >= (remainingStockForAdd || 0)))) ? { opacity: 0.35, cursor: 'not-allowed' } : {}}
-                            >
-                                <Plus size={16} />
-                            </button>
-                        </div>
                         <button
                             className={`pd-add-to-cart ${isAdded ? 'added' : ''} ${(effectiveAvailability === 'OUT_OF_STOCK' || (hasFiniteStock && hasReachedMax)) ? 'out-of-stock' : ''}`}
                             onClick={() => {
                                 if (effectiveAvailability === 'OUT_OF_STOCK') return;
-                                if (hasFiniteStock) {
-                                    if (hasReachedMax) {
-                                        return;
-                                    }
-                                    if (remainingStockForAdd !== null && quantity > remainingStockForAdd) {
-                                        if (onShowToast) onShowToast(`You already have ${inCartQuantity} in your cart. Only ${remainingStockForAdd} more can be added.`, "error");
-                                        return;
-                                    }
+                                if (hasFiniteStock && hasReachedMax) {
+                                    return;
                                 }
                                 if (onAddToCart) {
-                                    onAddToCart(product, selectedVariant, quantity);
+                                    onAddToCart(product, selectedVariant, 1);
                                     setIsAdded(true);
                                 }
                             }}

@@ -32,4 +32,5 @@ export const API_ENDPOINTS = {
   GET_CATEGORY: (id) => `${BASE_URL}/api/v1/categories/${id}`,
   GET_PRODUCTS: `${BASE_URL}/api/v1/products`,
   GET_PRODUCT: (id) => `${BASE_URL}/api/v1/products/${id}`,
+  GET_ACTIVE_BANNERS: `${BASE_URL}/api/v1/banners/active`,
 };
